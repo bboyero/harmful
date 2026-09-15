@@ -1,0 +1,33 @@
+# ---- SECRETOS: NUNCA subir al repo (el keystore firma las builds de Play;
+# gradle.properties lleva la contraseña en claro) ----
+android-cap/android/harmful.keystore
+android-cap/android/gradle.properties
+android-cap/android/local.properties
+
+# ---- Dependencias y builds de Android (se regeneran) ----
+android-cap/node_modules/
+android-cap/android/.gradle/
+android-cap/android/build/
+android-cap/android/app/build/
+android-cap/android/capacitor-android/build/
+*.apk
+*.aab
+
+# ---- Node portable y artefactos de desarrollo ----
+tools/node-v26.8.2-win-x64/
+tools/*.output
+
+# ---- Capturas de diagnóstico y temporales ----
+*.png
+!menu.png
+!bezelOK.png
+!bezel.jpg
+frame2.raw
+chrome-log.txt
+*.lock
+
+# ---- Configuracion local de herramientas ----
+.claude/
+
+# ---- IDE ----
+.idea/
