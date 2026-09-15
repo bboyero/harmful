@@ -1,0 +1,461 @@
+
+#define max_ene 299
+#define rabia 10
+#define SOLDADO 0
+#define MAGO 1
+#define FANTASMA 2
+#define MUERTE 10
+
+
+unsigned int num;
+long backx,backy;
+char backs;
+static u_long next = 1;
+
+struct enemigos
+{
+long X,Y;//posicion
+unsigned char direccion,secuencia,ultimo,aburrido,s_m;
+char Fmax;// secuencias de la animacion
+int D_x,D_y,D_r,puntos;
+unsigned char D_d;
+///////////////////////////
+unsigned char vel,tipo,F_cuerpo,F_disparo;
+signed int energia;
+} enemigo[max_ene];
+char direccion_Back;
+struct cuadro
+{
+int x1,y1,x2,y2;
+} YO,EL,A,B;
+
+
+  char HayInterseccion(cuadro rec1,cuadro rec2)
+{
+int AnchuraMayor, AlturaMayor;
+
+// Anchura1= rec1.x2 - rec1.x1;         
+// Altura1= rec1.y2 - rec1.y1;
+// Anchura2= rec2.x2 - rec2.x1;         
+// Altura2= rec2.y2 - rec2.y1;  
+
+ if (rec2.y1>rec1.y1) AlturaMayor=(rec1.y2 - rec1.y1);
+                 else AlturaMayor=(rec2.y2 - rec2.y1);
+ if (rec2.x1>rec1.x1) AnchuraMayor=(rec1.x2 - rec1.x1);
+                 else AnchuraMayor=(rec2.x2 - rec2.x1);         
+
+ return( (abs(rec1.x1 - rec2.x1)<AnchuraMayor) && (abs(rec1.y1 - rec2.y1)<AlturaMayor) );
+}
+
+  long caracteristica( long x ,long y)
+{
+return ((y/16)*ancho)+(x/16);
+}
+void init_personaje(char n)
+{
+                         switch (n){
+                         case MAGO:       {enemigo[num].tipo=MAGO;
+                                           enemigo[num].F_disparo=15;
+                                           enemigo[num].F_cuerpo=5;
+                                           enemigo[num].energia=10;
+                                           enemigo[num].Fmax=camHA_F-1;
+                                           enemigo[num].vel=2;
+                                           break;
+                                          }
+                         case SOLDADO:    {enemigo[num].tipo=SOLDADO;
+                                          enemigo[num].F_cuerpo=12;
+                                          enemigo[num].energia=20;
+                                          enemigo[num].Fmax=camHG_F-1;
+                                          enemigo[num].vel=3;
+                                          break;
+                                          }
+                        case FANTASMA:   {enemigo[num].tipo=FANTASMA;
+                                         enemigo[num].F_cuerpo=30;
+                                         enemigo[num].energia=20;
+                                         enemigo[num].Fmax=camFT_F-1;
+                                         enemigo[num].vel=4;
+                                         break;
+                                         }
+                        case MUERTE:   {enemigo[num].tipo=MUERTE;
+                                         enemigo[num].F_cuerpo=1;
+                                         enemigo[num].energia=200;
+                                         enemigo[num].Fmax=camMT_F-1;
+                                         enemigo[num].vel=2;
+                                         break;
+                                         }
+                                         }//swicht
+                         enemigo[num].secuencia=rand()%7;
+                         enemigo[num].ultimo=255;
+                         enemigo[num].aburrido=50;
+                         enemigo[num].direccion=rand()%7;
+                         enemigo[num].s_m=0;
+}
+void init_enemigos()
+{
+for (num=0;num<max_ene;num++) {
+                          enemigo[num].X=rand()%(topeX);
+                          enemigo[num].Y=rand()%(topeY);
+                         do{
+                          enemigo[num].X=rand()%(topeX);
+                          enemigo[num].Y=rand()%(topeY);
+                         } while (propiedad[caracteristica(enemigo[num].X,enemigo[num].Y)]!=0);
+                         init_personaje(rand()%3);
+                         }
+}
+  void E_arriba()
+{
+long prop;
+ enemigo[num].Y-=enemigo[num].vel;
+ prop=caracteristica(enemigo[num].X,enemigo[num].Y);
+ if ((propiedad[prop]!=0)) {enemigo[num].Y+=enemigo[num].vel;enemigo[num].ultimo=255;return;}
+ prop++;
+ if ((propiedad[prop]!=0)){enemigo[num].Y+=enemigo[num].vel;enemigo[num].ultimo=255;}
+}
+  void E_derecha()
+{
+long prop;
+ enemigo[num].X+=enemigo[num].vel;
+ prop=caracteristica(enemigo[num].X,enemigo[num].Y);
+ prop++;
+ if ((propiedad[prop]!=0)){enemigo[num].X-=enemigo[num].vel;enemigo[num].ultimo=255;return;}
+ prop+=ancho;
+ if ((propiedad[prop]!=0)){enemigo[num].X-=enemigo[num].vel;enemigo[num].ultimo=255;}
+}
+  void E_abajo()
+{
+long prop;
+ enemigo[num].Y+=enemigo[num].vel;
+ prop=caracteristica(enemigo[num].X,enemigo[num].Y);
+ prop+=ancho;
+ if ((propiedad[prop]!=0)){enemigo[num].Y-=enemigo[num].vel;enemigo[num].ultimo=255;return;}
+ prop++;
+ if ((propiedad[prop]!=0)){enemigo[num].Y-=enemigo[num].vel;enemigo[num].ultimo=255;}
+}
+  void E_izquierda()
+{
+long prop;
+ enemigo[num].X-=enemigo[num].vel;
+ prop=caracteristica(enemigo[num].X,enemigo[num].Y);
+ if ((propiedad[prop]!=0)){enemigo[num].X+=enemigo[num].vel;enemigo[num].ultimo=255;return;}
+ prop+=ancho;
+ if ((propiedad[prop]!=0)){enemigo[num].X+=enemigo[num].vel;enemigo[num].ultimo=255;}
+}
+  choqueP0_P1 ()
+{
+  YO.x1=play[0].H_x;YO.y1=play[0].H_y;
+  YO.x2=YO.x1+13;YO.y2=YO.y1+13;
+
+
+  EL.x1=play[1].H_x;EL.y1=play[1].H_y;
+  EL.x2=EL.x1+13;EL.y2=EL.y1+13;
+  return (HayInterseccion(YO,EL));
+
+}
+
+  char choque(char n)//yo_el enemigo o el yo
+{
+long x,y;
+ if (enemigo[num].energia<=0) return(FALSE);//los muertos no molestan
+x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+if ((x>0) && (x<MAX_X) && (y>0) && (y<MAX_Y)) //en pantalla
+  {
+  EL.x1=enemigo[num].X;EL.y1=enemigo[num].Y;
+  EL.x2=EL.x1+16;EL.y2=EL.y1+16;
+
+  YO.x1=play[n].H_x;YO.y1=play[n].H_y;
+  YO.x2=YO.x1+16;YO.y2=YO.y1+16;
+  return(HayInterseccion(YO,EL));                              
+  }
+return(FALSE);
+}
+  char choqueyo_el(char n)
+{
+long x,y;
+ if (enemigo[num].energia<=0) return(FALSE);//los muertos no molestan
+x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+if ((x>0) && (x<MAX_X) && (y>0) && (y<MAX_Y)) //en pantalla
+  {
+  EL.x1=enemigo[num].X;EL.y1=enemigo[num].Y;
+  EL.x2=EL.x1+13;EL.y2=EL.y1+13;
+
+  YO.x1=play[n].H_x;YO.y1=play[n].H_y;
+  YO.x2=YO.x1+13;YO.y2=YO.y1+13;
+  if (HayInterseccion(YO,EL)) {
+                              //lucha cuerpo a cuerpo
+                              if (enemigo[num].tipo!=MUERTE) {
+                              if (play[n].combate==TRUE) {enemigo[num].energia-=Pcombate_Max;
+                                                          play[n].puntos+=Pcombate_Max;
+                                                         } else
+                                                         {
+                                                         enemigo[num].energia-=Pcombate_Min;
+                                                         play[n].puntos+=Pcombate_Min;
+                                                         }   }
+                              return(TRUE);
+                              } 
+  }
+return(FALSE);
+}
+
+  char choque_entre_ellos()
+{
+long x,y;
+register int i;
+
+  A.x1=enemigo[num].X;A.y1=enemigo[num].Y;
+  A.x2=A.x1+13;A.y2=A.y1+13;
+
+for (i=0;i<max_ene;i++) {
+  if (i==num) continue;
+  if (enemigo[i].energia<=0) continue;//los muertos no molestan
+  B.x1=enemigo[i].X;B.y1=enemigo[i].Y;
+  B.x2=B.x1+13;B.y2=B.y1+13;
+  if (HayInterseccion(A,B)==TRUE) return(TRUE);
+                       }
+return(FALSE);
+}
+  void desplazaE()
+{
+switch(enemigo[num].direccion){
+                case 0:{E_arriba();break;}
+                case 1:{E_derecha();E_arriba();break;}
+                case 2:{E_derecha();break;}
+                case 3:{E_derecha();E_abajo();break;}
+                case 4:{E_abajo();break;}
+                case 5:{E_izquierda();E_abajo();break;}
+                case 6:{E_izquierda();break;}
+                case 7:{E_izquierda();E_arriba();break;}
+                };//case
+}
+
+  void disparaE()
+{
+ if (enemigo[num].D_d==255) {sb_play(disparo);
+                             enemigo[num].D_d=enemigo[num].direccion;
+                             enemigo[num].D_x=enemigo[num].X;
+                             enemigo[num].D_y=enemigo[num].Y;
+                             enemigo[num].D_r=0;
+                            }
+
+}
+void mueveE_aleatorio()
+{
+if (enemigo[num].ultimo==255) {enemigo[num].direccion=enemigo[num].ultimo=(rand()%8);}
+enemigo[num].aburrido++; if (enemigo[num].aburrido==50) enemigo[num].ultimo=255;
+desplazaE();
+ if ((choque_entre_ellos()==TRUE) || (choque(0)==TRUE) || (choque(1)==TRUE))
+                     {
+                      enemigo[num].secuencia=backs;
+                      enemigo[num].X=backx;
+                      enemigo[num].Y=backy;
+                      enemigo[num].ultimo=255;
+                     }
+
+}
+void quejarse()
+{
+if (resto_sample==0) {//solo si no suena nada
+ switch(rand()%20){
+ case 1:{sb_play(dado1);break;}
+ case 2:{sb_play(dado2);break;}
+ case 3:{sb_play(dado3);break;}
+                }
+                     }
+}
+
+void compruebo_choquesE()
+{
+signed char n;
+if (choque_entre_ellos()==TRUE)
+                     {
+                      enemigo[num].secuencia=backs;
+                      enemigo[num].X=backx;
+                      enemigo[num].Y=backy;
+                      //enemigo[num].ultimo=255;
+/*
+                      direccion_Back=enemigo[num].direccion;
+                      for (n=-2;n<=2;n++) { //180 grados
+                      if (n==0) continue;
+                      enemigo[num].direccion=enemigo[num].direccion+n;
+                      if (enemigo[num].direccion>7) enemigo[num].direccion=0;
+                      desplazaE(); if (choque_entre_ellos()==TRUE){
+                                       enemigo[num].secuencia=backs;
+                                       enemigo[num].X=backx;
+                                       enemigo[num].Y=backy;
+                                       enemigo[num].direccion=direccion_Back;
+                                                            } else {enemigo[num].aburrido=25;break;}
+                                       };
+*/
+                    };
+
+if (choque(0)==TRUE)  {
+                        switch(enemigo[num].tipo)
+                         {
+                         case SOLDADO:
+                         case MAGO:{if (veces%rabia==0) play[0].energia-=(enemigo[num].F_cuerpo-play[0].armadura);break;}
+                         case FANTASMA:{enemigo[num].energia=0;
+                                       play[0].energia-=(enemigo[num].F_cuerpo-play[0].armadura);
+                                       break;}
+                         case MUERTE:{sb_play(electr);play[0].energia-=enemigo[num].F_cuerpo;enemigo[num].energia--;break;}
+                         }
+                      
+                      quejarse();
+                      enemigo[num].secuencia=backs;
+                      enemigo[num].X=backx;
+                      enemigo[num].Y=backy;
+                      enemigo[num].ultimo=255;
+                      return;
+                     }
+
+if (choque(1)==TRUE) {
+                        switch(enemigo[num].tipo)
+                         {
+                         case SOLDADO:
+                         case MAGO:{if (veces%rabia==0) play[1].energia-=(enemigo[num].F_cuerpo-play[1].armadura);break;}
+                         case FANTASMA:{enemigo[num].energia=0;
+                                       play[1].energia-=(enemigo[num].F_cuerpo-play[1].armadura);
+                                       break;}
+                         case MUERTE:{sb_play(electr);play[1].energia-=enemigo[num].F_cuerpo;enemigo[num].energia--;break;}
+                         }
+
+                      quejarse();
+                      enemigo[num].secuencia=backs;
+                      enemigo[num].X=backx;
+                      enemigo[num].Y=backy;
+                      enemigo[num].ultimo=255;                      
+                      return;
+                     }
+
+};
+
+  void mueveE_ataca()
+{
+int Vx,Vy,Rx,Ry,x,y;
+signed char n;
+
+if (inmovil==TRUE)  return;
+//if (enemigo[num].aburrido<50) {enemigo[num].aburrido++; desplazaE();compruebo_choquesE();}
+
+Vx=abs(play[0].H_x-enemigo[num].X);
+Vy=abs(play[0].H_y-enemigo[num].Y);
+
+Rx=abs(play[1].H_x-enemigo[num].X);
+Ry=abs(play[1].H_y-enemigo[num].Y);
+
+//hacia donde voy, al mas 'cercano'
+if ((Vx+Vy)>(Rx+Ry)) n=1; else n=0;
+// pero igual soy invisible
+if (play[0].invisible==TRUE) n=1; else if (play[1].invisible==TRUE) n=0;
+if (play[n].invisible==TRUE)  {mueveE_aleatorio();return;} 
+
+
+if (enemigo[num].tipo==MAGO) {
+if (n==0) {if ((Vx+Vy)>200) {mueveE_aleatorio();return;};}
+    else  {if ((Rx+Ry)>200) {mueveE_aleatorio();return;};}
+                            if (veces%rabia==0) disparaE();
+                            }
+  
+//fuera de la pantalla no muevo
+x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+if ((x<-16) || (x>MAX_X) || (y<-16) || (y>MAX_Y)) return;
+
+//se acerca el enemigo al hombre
+Vx=play[n].H_x/64;
+Rx=enemigo[num].X/64;
+
+Vy=play[n].H_y/64;
+Ry=enemigo[num].Y/64;
+//ajuste mas fino
+/*
+if ((Vx==Rx)&&(Vy==Ry)) {Vx=play[n].H_x/32;Rx=enemigo[num].X/32;
+                         Vy=play[n].H_y/32;Ry=enemigo[num].Y/32;}
+
+if ((Vx==Rx)&&(Vy==Ry)) {Vx=play[n].H_x/16;Rx=enemigo[num].X/16;
+                         Vy=play[n].H_y/16;Ry=enemigo[num].Y/16;}
+  */
+if ((Vx==Rx)&&(Vy==Ry)) {Vx=play[n].H_x/4;Rx=enemigo[num].X/4;
+                         Vy=play[n].H_y/4;Ry=enemigo[num].Y/4;}
+
+
+  if (Vx>Rx) {enemigo[num].direccion=2;} else
+  if (Vx<Rx) {enemigo[num].direccion=6;} 
+  
+  if (Vy>Ry) {if (enemigo[num].direccion==2) enemigo[num].direccion=3; else
+                                   if (enemigo[num].direccion==6) enemigo[num].direccion=5; else
+                                   enemigo[num].direccion=4;
+                } else
+  if (Vy<Ry) {if (enemigo[num].direccion==2) enemigo[num].direccion=1; else
+                      if (enemigo[num].direccion==6) enemigo[num].direccion=7; else
+                      enemigo[num].direccion=0;
+             }
+// n es hacia el que voy
+if (play[n].repulsivo==TRUE) { enemigo[num].direccion+=4;
+                      if (enemigo[num].direccion>7) enemigo[num].direccion-=8;
+                     }
+desplazaE();
+compruebo_choquesE();
+}
+
+
+  void mueveE()
+{
+if (enemigo[num].energia<=0) return;
+backx=enemigo[num].X;backy=enemigo[num].Y;backs=enemigo[num].secuencia;
+  //mueveE_aleatorio();
+ mueveE_ataca();
+//no mover si no avanza
+if ((enemigo[num].X!=backx) || (enemigo[num].Y!=backy)) enemigo[num].secuencia++;
+}
+
+  void poneE()
+{
+signed int x,y;
+int alto,ancho;
+char *ptro;
+
+x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+if ((x<-10) || (x>MAX_X) || (y<-10) || (y>MAX_Y)) return; //si no esta en pantalla
+if (enemigo[num].energia<=0){if (enemigo[num].s_m>5) return;
+                             switch (enemigo[num].tipo){                             
+                             case MAGO:
+                             case SOLDADO:
+                             case MUERTE:
+                                          {
+                                          putico_CTRL(x,y,19,16,explo+(enemigo[num].s_m*19*16),Pvirtual);
+                                          enemigo[num].s_m++;
+                                          break;
+                                          }
+                             case FANTASMA:{
+                                          putico_CTRL(x,y,19,16,explo_b+(enemigo[num].s_m*19*16),Pvirtual);
+                                          enemigo[num].s_m++;
+                                          break;
+                                          }
+                                                       }
+                             return;
+                             }
+if (enemigo[num].secuencia>enemigo[num].Fmax) enemigo[num].secuencia=0;
+switch (enemigo[num].tipo)
+   {
+   case SOLDADO:{
+          ancho=camHG_X;alto=camHG_Y;
+          ptro=camHG+(camHG_X*camHG_Y*8*enemigo[num].direccion)+(camHG_X*camHG_Y*enemigo[num].secuencia);
+          break;
+          }
+   case MAGO:{
+          ancho=camHA_X;alto=camHA_Y;
+          ptro=camHA+(camHA_X*camHA_Y*8*enemigo[num].direccion)+(camHA_X*camHA_Y*enemigo[num].secuencia);
+          break;
+          }
+   case FANTASMA:{
+          ancho=camFT_X;alto=camFT_Y;
+          ptro=camFT+(camFT_X*camFT_Y*8*enemigo[num].direccion)+(camFT_X*camFT_Y*enemigo[num].secuencia);
+          break;
+                 }
+   case MUERTE:{
+          ancho=camMT_X;alto=camMT_Y;
+          ptro=camMT+(camMT_X*camMT_Y*8*enemigo[num].direccion)+(camMT_X*camMT_Y*enemigo[num].secuencia);
+          break;
+          }
+   }
+putico_sombra_CTRL(x+SOLx,y+SOLy,ancho,alto,ptro,Pvirtual);
+putico_CTRL(x,y,ancho,alto,ptro,Pvirtual);
+}

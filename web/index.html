@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>HARMFUL — Web</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  /* Insets del área segura (notch y barras del sistema en edge-to-edge) */
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: #000;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Centra el canvas DENTRO del área segura (descuenta notch/barras), así los
+     márgenes laterales son simétricos y visibles para poner los controles */
+  body {
+    box-sizing: border-box;
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+  }
+  #wrap {
+    position: relative;
+    line-height: 0;
+  }
+  #screen {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #000;
+    touch-action: none;
+  }
+  /* Controles táctiles (solo con .touch-on) */
+  .tbtn {
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 3.2vmin;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  .tbtn:active { background: rgba(255, 255, 255, 0.4); }
+  /* Cruceta analógica: pad neutro con la BOLA roja arcade como pomo (solo la
+     bola es roja; el círculo exterior queda translúcido como antes) */
+  #tpad {
+    left: 7%; top: 52%; width: 28%;
+    aspect-ratio: 1;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  #tpad.activo { background: rgba(255, 255, 255, 0.2); }
+  #tpad .knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 38%; aspect-ratio: 1;
+    border-radius: 50%;
+    /* bola roja arcade semi-transparente */
+    background: radial-gradient(circle at 30% 30%,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 138, 128, 0.75) 45%,
+      rgba(198, 40, 40, 0.7) 100%);
+    border: 2px solid rgba(90, 0, 0, 0.7);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  #tfire  { left: 80%; top: 64%; width: 15%; height: 24%; font-size: 5vmin; }
+  #tpot   { left: 66%; top: 74%; width: 11%; height: 17%; }
+  #tsalir { left: 87%; top: 2%; width: 10%; height: 7%; font-size: 2.4vmin; }
+  /* Disparo y poción usan el mismo estilo neutro que ESC (la .tbtn base);
+     solo la bola de la cruceta lleva el degradado rojo arcade */
+  /* Los controles táctiles solo se muestran durante la partida (INTRO/JUEGO);
+     en MENU/FIN se arranca tocando la pantalla entera */
+  #tpad, #tfire, #tpot, #tsalir { display: none; }
+  .en-juego #tpad, .en-juego #tfire, .en-juego #tpot, .en-juego #tsalir { display: flex; }
+  /* Botones ▲▼ del menú (solo táctil y solo en estado MENU) */
+  .tmenu-nav { display: none; width: 12%; height: 15%; font-size: 7vmin; }
+  .en-menu .tmenu-nav { display: flex; }
+  .tmenu-nav:first-of-type { left: 78%; top: 25%; }
+  .tmenu-nav:last-of-type { left: 78%; top: 50%; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="screen" width="640" height="400"></canvas>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

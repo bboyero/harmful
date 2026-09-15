@@ -1,0 +1,29 @@
+JUEGO.CC(106): Error! E059: (col 16) unable to open 'dpmi.h' 
+JUEGO.CC(107): Error! E059: (col 16) unable to open 'go32.h' 
+JUEGO.CC(140): Error! E336: (col 23) declaration specifiers are required to declare '_go32_dpmi_registers' 
+JUEGO.CC(140): Error! E498: (col 22) syntax error before 'r'; probable cause: incorrectly spelled type name 
+sb.cc(19): Error! E059: (col 17) unable to open 'go32.h' 
+sb.cc(19): Note! N393: (col 17) included from JUEGO.CC(141) 
+sb.cc(21): Error! E059: (col 17) unable to open 'dpmi.h' 
+sb.cc(23): Error! E059: (col 15) unable to open 'pc.h' 
+proto.h(4): Error! E224: (col 57) 'sb_intr' is a variable of type 'void' 
+proto.h(4): Note! N393: (col 57) included from sb.cc(29) 
+proto.h(4): Note! N393: (col 57) included from JUEGO.CC(141) 
+proto.h(4): Error! E029: (col 56) symbol '_go32_dpmi_registers' has not been declared 
+proto.h(4): Error! E029: (col 56) symbol 'reg' has not been declared 
+sb.cc(32): Error! E006: (col 27) syntax error; probable cause: missing ';' 
+sb.cc(32): Note! N393: (col 27) included from JUEGO.CC(141) 
+sb.cc(34): Error! E042: (col 36) symbol '_go32_dpmi_seginfo' already defined 
+sb.cc(34): Note! N392: (col 36) 'int _go32_dpmi_seginfo' defined in: sb.cc(32) (col 8) 
+sb.cc(34): Error! E006: (col 27) syntax error; probable cause: missing ';' 
+sb.cc(35): Error! E006: (col 29) syntax error; probable cause: missing ';' 
+sb.cc(36): Error! E042: (col 32) symbol '_go32_dpmi_seginfo' already defined 
+sb.cc(36): Note! N392: (col 32) 'int _go32_dpmi_seginfo' defined in: sb.cc(32) (col 8) 
+sb.cc(36): Error! E006: (col 27) syntax error; probable cause: missing ';' 
+sb.cc(38): Error! E042: (col 36) symbol '_go32_dpmi_seginfo' already defined 
+sb.cc(38): Note! N392: (col 36) 'int _go32_dpmi_seginfo' defined in: sb.cc(32) (col 8) 
+sb.cc(38): Error! E006: (col 27) syntax error; probable cause: missing ';' 
+sb.cc(39): Error! E042: (col 32) symbol '_go32_dpmi_seginfo' already defined 
+sb.cc(39): Note! N392: (col 32) 'int _go32_dpmi_seginfo' defined in: sb.cc(32) (col 8) 
+sb.cc(39): Error! E006: (col 27) syntax error; probable cause: missing ';' 
+sb.cc(61): Error! E133: (col 16) too many errors: compilation aborted 

@@ -1,0 +1,43 @@
+============================================================
+HARMFUL — Textos para la ficha de Play Store
+============================================================
+
+--- DESCRIPCIÓN CORTA (máx. 80 caracteres) ---
+
+Plataformas retro de 1997: rescata a la princesa Leia del Castillo Oscuro.
+
+(73 caracteres)
+
+--- DESCRIPCIÓN LARGA ---
+
+«Hello, intrepid warrior: are you ready for rescue to the princess
+Leia from the Dark Castle? Then come on!»
+
+HARMFUL es un juego de plataformas original de 1997, creado por
+Borja Boyero y Javi Caballero para MS-DOS, ahora portado fielmente
+a Android: píxel a píxel, sin retoques.
+
+La princesa Leia ha sido secuestrada en el Castillo Oscuro y solo
+tú puedes salvarla. Recorre 15 niveles llenos de peligros: esquiva
+a los enemigos, busca las llaves que abren las puertas, rompe las
+vasijas para descubrir qué esconden y cuidado con las nubes que
+pasan por el cielo… algunas se pueden pisar y otras no.
+
+Características:
+• El juego original de 1997, portado con fidelidad total: misma
+  física, mismos gráficos, mismo sonido.
+• 15 mapas con scroll lateral y cronómetro.
+• Gráficos pixel-art de la época y efectos de sonido Sound Blaster
+  originales.
+• Juego completo, sin anuncios, sin compras integradas y sin
+  conexión: todo se ejecuta en tu dispositivo.
+
+¿Aceptas el reto?
+
+--- CAMPOS ADICIONALES ---
+
+Público objetivo (sugerido): 7 años en adelante (juego de
+plataformas clásico, sin violencia explícita ni textos sensibles).
+
+Clasificación IARC: responder el cuestionario con "sin violencia,
+sin sexo, sin apuestas, sin compras" → saldrá aprox. "Para todos".

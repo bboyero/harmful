@@ -1,0 +1,6 @@
+{
+  "name": "harmful-web",
+  "private": true,
+  "type": "module",
+  "description": "Port a JavaScript del juego HARMFUL (1997). Sin dependencias."
+}

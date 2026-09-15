@@ -1,0 +1,1527 @@
+
+
+#define ENTER 0x1C
+#define F01 0x3b
+#define ESC 0x01
+#define DER 0x4D
+#define IZQ 0x4B
+#define ARR 0x48
+#define ABJ 0x50
+#define SPC 0x39
+#define MAS 0x4E
+#define MENOS 0x4A
+#define CERO 0x52
+
+#define INI 0x47
+#define FIN 0x4F
+#define PGU 0x49
+#define PGD 0x51
+#define Pausa 0x45
+
+#define nDI 0x56
+#define nIZ 0x10
+#define nDE 0x12
+#define nAB 0x11
+#define nAR 0x03
+
+
+
+
+#define camHV_F 8
+#define camHV_X 13
+#define camHV_Y 13
+
+#define camHR_F 8
+#define camHR_X 13
+#define camHR_Y 13
+
+#define camHG_F 8
+#define camHG_X 13
+#define camHG_Y 13
+
+#define camHA_F 8
+#define camHA_X 13
+#define camHA_Y 13
+
+#define camFT_F 8
+#define camFT_X 13
+#define camFT_Y 13
+
+#define camMT_F 8
+#define camMT_X 13
+#define camMT_Y 13
+
+
+#define GRADIENTE 128
+#define VEL 4
+#define NUBES_NUM 9
+#define NUBES_MAX 9
+#define CAMPOX 90   //lugares donde desaparece la nube
+#define CAMPOY 125
+
+#define H2O 1
+#define SLD 2
+#define MINA 3
+#define desDER 4
+#define desIZQ 5
+#define desARR 6
+#define desABJ 7
+
+#define FRGL 10
+#define EXT 255
+#define GEN 254
+#define DOOR 253
+#define TRAMPA 252
+#define CABLE 251
+#define SOLIDOF 250
+#define TRANS 249
+#define VOID 200
+
+
+#define ALEATORIO 99
+#define LLAVE 100
+#define FOOD  101
+#define FOODF 102
+#define POTF  103
+#define POT   104
+#define ARMADURA 105
+#define COMBATE 106
+#define MAGIA 107
+#define INMOVIL 108
+#define INMUNE 109
+#define REPULSIVO 110
+#define INVISIBLE 111
+#define VENENO 120
+
+#define arma_vel 15
+#define arma_alcance 250
+#define arma_fuerza 20
+#define Pcombate_Max 12
+#define Pcombate_Min 6
+#define PUERTAS 30
+//Situa la sombra
+#define SOLx 4
+#define SOLy 4
+
+#include<dpmi.h>
+#include<go32.h>
+#include<stdio.h>
+#include<dos.h>
+#include<time.h>
+#include<string.h>
+
+
+struct Tnube
+{
+char *ptro;
+int Lx,Ly,x,y;
+char activa,vel;
+} nube[NUBES_MAX];
+
+struct bicho
+{
+signed int energia;
+int puntos;
+signed int H_x,H_y,H_x_back,H_y_back,H_d;
+char H_s,H_s_back,H_s_m;
+signed int D_x,D_y,D_r;//ctrl disparo
+unsigned char D_d;
+char level_end;
+//
+char llaves,pot,armadura,combate,magia,repulsivo,invisible;
+} play[2];
+
+struct Sonido
+{
+char *ptro;int bytes;
+} choque_,disparo,dado2,cristal,risa,comer,llaves_,salida,choff,electr,
+  ahhhhh,trampa,mina,dado1,dado3,pocion_,transp_;
+
+_go32_dpmi_registers r;
+#include "sb.cc"
+#include "ctes.cc"
+#include "key.cc"
+
+unsigned char byte[8]={128,64,32,16,8,4,2,1};
+unsigned char rojos_R1[2],verdes_G[2],rojos_R2[2];
+long inicio,final;
+char *VGA=0xD0000000;
+int VGAreal=0xA0000;
+unsigned ds,conv;
+char *Pvirtual,*Pfondo,*baldosas,*Pmenus;
+char *camHV,*camHR,*camHG,*camHA,*camFT,*camMT;
+char *bola,*explo,*explo_b;
+char *cursor;
+char *mkey,*mpot,*mmagia,*marmadura,*mcombate;
+char Video_banco,cadena[64],paleta[256][3],paleta_back[256][3];
+unsigned short *mapa;
+unsigned char *propiedad,*miniFNT,*bigFNT,*midleFNT,*abcFNT;
+long veces=0;
+signed long posenbaldosaX,posenbaldosaY;
+char marcador=1;//pon o no el marcador
+long absolutoX,absolutoY;//Coordenadas absolutas de la pos del mapa que dibujo
+int mapaX=0,mapaY=0;
+long topeX,topeY;//esquina inferior del mapa 'corregida' para representacion
+unsigned int ancho,alto;//altura anchura mapa
+unsigned char jug=1,rota,rota_s=0,reposo=TRUE,end=FALSE;//jugadores
+char inmovil,inmune;
+char level_ac=0,Tpuertas;//desaparencen todas las puertas
+char autor[24];
+char *MNBR="(c)Borja Boyero. 1996-97";
+//**********************************************************************
+#include "int08.cc"
+#include "SVGA.cc"
+#include "FX.cc"
+#include "scroll.cc"
+#include "crono.cc"
+#include "enemigos.cc"
+#include "generado.cc"
+//**********************************************************************
+//**********************************************************************
+//**********************************************************************
+//**********************************************************************
+//**********************************************************************/
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+  void mueve_derecha();
+  void mueve_izquierda();
+  void mueve_arriba();
+  void mueve_abajo();
+void disk_paleta(char fichero[])
+{
+FILE *hand;
+hand=fopen(fichero,"rb");
+fseek(hand,-768,SEEK_END);//siempre esta al final y ocupa 768
+fread(paleta,1,768,hand);
+fclose(hand);
+  movedata (ds,(int)paleta,ds,(int)paleta_back,768);
+}
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+  void rotar()
+{
+//        if (veces%4!=0) return; // 1 de cada 4
+
+        Setpal(118,(rota<<1),0,0);
+        Setpal(118+GRADIENTE,(63-(rota<<1))>>1,0,0);
+
+        Setpal(124,63-(rota<<1),0,0);
+        Setpal(124+GRADIENTE,(63-(rota<<1))>>1,0,0);
+
+        Setpal(121,0,63-(rota<<1),0);
+        Setpal(121+GRADIENTE,0,(63-(rota<<1))>>1,0);
+        Setpal(122,0,(rota<<1),0);
+        Setpal(122+GRADIENTE,0,(48-(rota<<1))>>1,0);
+        Setpal(123,0,32-(rota<<1),0);
+        Setpal(123+GRADIENTE,0,(32-(rota<<1))>>1,0);
+
+
+        if (rota_s==0) {rota++;if (rota==30) rota_s=!rota_s;} else
+                       {rota--;if (rota==0) rota_s=!rota_s;}
+
+
+}
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+void carga()
+{
+FILE *hand;
+struct stat statbuf;
+int i;
+
+if (SB==TRUE) {
+hand=fopen("sonido.dat","rb");
+choque_.bytes=2019;
+choque_.ptro=(char *)malloc(choque_.bytes);
+fread(choque_.ptro,1,choque_.bytes,hand);
+disparo.bytes=2335;
+disparo.ptro=(char *)malloc(disparo.bytes);
+fread(disparo.ptro,1,disparo.bytes,hand);
+dado2.bytes=3410;
+dado2.ptro=(char *)malloc(dado2.bytes);
+fread(dado2.ptro,1,dado2.bytes,hand);
+cristal.bytes=5676;
+cristal.ptro=(char *)malloc(cristal.bytes);
+fread(cristal.ptro,1,cristal.bytes,hand);
+risa.bytes=22399;
+risa.ptro=(char *)malloc(risa.bytes);
+fread(risa.ptro,1,risa.bytes,hand);
+comer.bytes=2872;
+comer.ptro=(char *)malloc(comer.bytes);
+fread(comer.ptro,1,comer.bytes,hand);
+llaves_.bytes=3583;
+llaves_.ptro=(char *)malloc(llaves_.bytes);
+fread(llaves_.ptro,1,llaves_.bytes,hand);
+salida.bytes=12000;
+salida.ptro=(char *)malloc(salida.bytes);
+fread(salida.ptro,1,salida.bytes,hand);
+choff.bytes=13909;
+choff.ptro=(char *)malloc(choff.bytes);
+fread(choff.ptro,1,choff.bytes,hand);
+
+electr.bytes=7891;
+electr.ptro=(char *)malloc(electr.bytes);
+fread(electr.ptro,1,electr.bytes,hand);
+
+ahhhhh.bytes=7721;
+ahhhhh.ptro=(char *)malloc(ahhhhh.bytes);
+fread(ahhhhh.ptro,1,ahhhhh.bytes,hand);
+
+trampa.bytes=6598;
+trampa.ptro=(char *)malloc(trampa.bytes);
+fread(trampa.ptro,1,trampa.bytes,hand);
+
+mina.bytes=15895;
+mina.ptro=(char *)malloc(mina.bytes);
+fread(mina.ptro,1,mina.bytes,hand);
+
+dado1.bytes=4377;
+dado1.ptro=(char *)malloc(dado1.bytes);
+fread(dado1.ptro,1,dado1.bytes,hand);
+
+dado3.bytes=2777;
+dado3.ptro=(char *)malloc(dado3.bytes);
+fread(dado3.ptro,1,dado3.bytes,hand);
+ 
+pocion_.bytes=7524;
+pocion_.ptro=(char *)malloc(pocion_.bytes);
+fread(pocion_.ptro,1,pocion_.bytes,hand);
+
+transp_.bytes=8657;
+transp_.ptro=(char *)malloc(transp_.bytes);
+fread(transp_.ptro,1,transp_.bytes,hand);
+fcloseg (hand);
+             }
+
+hand=fopen("ANIMA.FRM","rb");
+camHV=(char *)malloc(camHV_X*camHV_Y*camHV_F*8);
+fread(camHV,1,camHV_X*camHV_Y*camHV_F*8,hand);
+
+camHR=(char *)malloc(camHR_X*camHR_Y*camHR_F*8);
+fread(camHR,1,camHR_X*camHR_Y*camHR_F*8,hand);
+
+camHG=(char *)malloc(camHG_X*camHG_Y*camHG_F*8);
+fread(camHG,1,camHG_X*camHG_Y*camHG_F*8,hand);
+
+camHA=(char *)malloc(camHA_X*camHA_Y*camHA_F*8);
+fread(camHA,1,camHA_X*camHA_Y*camHA_F*8,hand);
+
+camFT=(char *)malloc(camFT_X*camFT_Y*camFT_F*8);
+fread(camFT,1,camFT_X*camFT_Y*camFT_F*8,hand);
+
+camMT=(char *)malloc(camMT_X*camMT_Y*camMT_F*8);
+fread(camMT,1,camMT_X*camMT_Y*camMT_F*8,hand);
+
+bola=(char *)malloc(9*9*8);
+fread(bola,1,9*9*8,hand);
+
+explo=(char *)malloc(19*16*6);
+fread(explo,1,19*16*6,hand);
+
+explo_b=(char *)malloc(19*16*6);
+fread(explo_b,1,19*16*6,hand);
+
+led=(char *)malloc(11*33*2);
+fread(led,1,11*33*2,hand);
+
+cursor=(char *)malloc(63*63*12);
+fread(cursor,1,63*63*12,hand);
+fcloseg(hand);
+
+stat ("fondo.1",&statbuf);
+baldosas=(char *)malloc(statbuf.st_size);
+hand=fopen("fondo.1","rb");
+fread(baldosas,1,statbuf.st_size,hand);
+fcloseg(hand);
+
+
+hand=fopen("mobj.dat","rb");
+mkey=(char *)malloc(256);
+mpot=(char *)malloc(256);
+mmagia=(char *)malloc(256);
+marmadura=(char *)malloc(256);
+mcombate=(char *)malloc(256);
+fread(mkey,1,256,hand);
+fread(mpot,1,256,hand);
+fread(mmagia,1,256,hand);
+fread(marmadura,1,256,hand);
+fread(mcombate,1,256,hand);
+fcloseg(hand);
+
+nube[0].Lx=80;nube[0].Ly=119;  nube[1].Lx=52;nube[1].Ly=78;
+nube[2].Lx=22;nube[2].Ly=78;   nube[3].Lx=20;nube[3].Ly=49;
+nube[4].Lx=32;nube[4].Ly=72;   nube[5].Lx=18;nube[5].Ly=32;
+nube[6].Lx=15;nube[6].Ly=32;   nube[7].Lx=19;nube[7].Ly=65;
+nube[8].Lx=36;nube[8].Ly=89;
+
+
+hand=fopen("nubes.dat","rb");
+for (i=0;i<NUBES_NUM;i++)
+{
+ nube[i].ptro=(char *)malloc(nube[i].Lx*nube[i].Ly);
+ fread(nube[i].ptro,1,nube[i].Lx*nube[i].Ly,hand);
+ nube[i].vel=(rand()%4)+1;
+}
+fcloseg(hand);
+
+cargaFNT();
+}
+
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+void carga_level(char level)
+{
+FILE *hand;
+struct stat statbuf;
+long i;
+for (num=0;num<max_ene;num++) {enemigo[num].energia=0;enemigo[num].s_m=99;}
+for (gn=0;gn<max_gen;gn++) generador[gn].energia=0;
+                         sprintf(cadena,"MAPA.%x",level);
+hand=fopen(cadena,"rb");
+fread(&ancho,1,2,hand);
+fread(&alto,1,2,hand);
+fread(&play[0].H_x,1,4,hand);
+fread(&play[0].H_y,1,4,hand);
+mapa=(unsigned short *)malloc(ancho*alto*2);
+fread(mapa,1,(ancho*alto*2),hand);
+propiedad=(unsigned char *)malloc(ancho*alto);
+fread(propiedad,1,(ancho*alto),hand);
+
+ max_gen=0;
+for (gn=0;gn<50;gn++) {
+ fread(&generador[gn].X,1,4,hand);
+ fread(&generador[gn].Y,1,4,hand);
+ fread(&generador[gn].tipo,1,1,hand);
+
+ if ((generador[gn].X!=0) || (generador[gn].Y!=0))
+        {switch(generador[gn].tipo){
+         case MAGO:{generador[gn].energia=10;break;}
+         case SOLDADO:{generador[gn].energia=20;break;}
+         case FANTASMA:{generador[gn].energia=30;break;}
+         default:{generador[gn].energia=10;break;}
+                                  }//case
+         max_gen++;
+        }
+                      }//for
+ max_gen++;
+
+for (num=0;num<100;num++) {
+ fread(&enemigo[num].X,1,4,hand);
+ fread(&enemigo[num].Y,1,4,hand);
+ fread(&enemigo[num].tipo,1,1,hand);
+ if ((enemigo[num].X!=0) || (enemigo[num].Y!=0))  init_personaje(enemigo[num].tipo);
+                          }
+// fread(autor,1,25,hand);//el autor del nivel.
+fclose(hand);
+for (i=0;i<ancho*alto;i++) {if (propiedad[i]==VOID) propiedad[i]=0;
+                            if (propiedad[i]==ALEATORIO) propiedad[i]=(rand()%8)+100;
+                           }
+topeX=(ancho*16)-MAX_X;
+topeY=(alto*16)-MAX_Y;
+}
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+void salir(long prop)
+{
+sb_play(salida);
+play[jug].H_x=(prop%ancho)*16;
+play[jug].H_y=(prop/ancho)*16;
+play[jug].level_end=TRUE;
+play[jug].H_s_m=0;
+}
+void puertas()//quito todas las puertas del nivel
+{
+long x,y,prop,a,b;
+Tpuertas=0;
+for (b=0;b<alto;b++)
+ for (a=0;a<ancho;a++){
+  prop=(b*ancho)+a;
+  if (propiedad[prop]==DOOR) {
+                propiedad[prop]=0;mapa[prop]=343;//blindaje
+                x=(prop % ancho)*16;
+                y=(prop / ancho)*16;
+                x-=absolutoX;y-=absolutoY;
+     //           if ((x>0) && (x<MAX_X) && (y>0) && (y<MAX_Y))
+                putimage_CTRL(x,y,16,16,baldosas+(mapa[prop]*256),Pfondo);
+                             }
+                      }
+}
+void rompe_pot(long prop)
+{
+long x,y;
+sb_play(cristal);
+to_white();pon_paleta();
+propiedad[prop]=0;
+mapa[prop]++;// LA BALDOSA SIN EL OBJ ES LA SIGUIENTE
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+for (num=0;num<max_ene;num++) {
+                        //fuera de la pantalla no toco
+                        x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+                        if ((x<-16) || (x>MAX_X) || (y<-16) || (y>MAX_Y)) continue;
+                        enemigo[num].energia-=10;play[jug].puntos+=10;
+                        }
+delay(20);
+movedata (ds,(int)paleta_back,ds,(int)paleta,768);pon_paleta();
+}
+void tira_pot()
+{
+long x ,y;
+if (play[jug].pot>0) play[jug].pot--; else return;
+for (num=0;num<max_ene;num++) {
+                        //fuera de la pantalla no toco
+                        x=enemigo[num].X-absolutoX;y=enemigo[num].Y-absolutoY;
+                        if ((x<-16) || (x>MAX_X) || (y<-16) || (y>MAX_Y)) continue;
+                        if (enemigo[num].tipo==MUERTE) {enemigo[num].energia=0;play[jug].puntos+=1000;continue;}
+                        if (play[jug].magia==TRUE) {enemigo[num].energia-=30;play[jug].puntos+=30;}
+                                        else {enemigo[num].energia-=20;play[jug].puntos+=20;}
+                        }
+if (play[jug].magia==TRUE) for (gn=0;gn<max_gen;gn++) {x=generador[gn].X-absolutoX;y=generador[gn].Y-absolutoY;
+                                                if ((x<-16) || (x>MAX_X) || (y<-16) || (y>MAX_Y)) continue;
+                                                generador[gn].energia-=30;play[jug].puntos+=30;
+                                                destruye_generador();
+                                                }
+delay(20);
+movedata (ds,(int)paleta_back,ds,(int)paleta,768);pon_paleta();
+
+}
+void rompe_comida(long prop)
+{
+long x,y;
+sb_play(cristal);
+propiedad[prop]=0;
+mapa[prop]++;// LA BALDOSA SIN EL OBJ ES LA SIGUIENTE
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+}
+void pisa_mina(long prop);
+
+void al_lado(long cual)
+{
+switch (propiedad[cual]) {
+case MINA:{pisa_mina(cual);break;}
+case FOODF:{rompe_comida(cual);break;}
+case POTF:
+case ARMADURA:
+case COMBATE:
+case MAGIA:
+case VENENO:
+            {rompe_pot(cual);break;}
+              }
+}
+void pisa_mina(long prop)
+{
+long x,y,i;
+sb_play(mina);
+propiedad[prop]=0;
+mapa[prop]++;// LA BALDOSA SIN EL OBJ ES LA SIGUIENTE
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+//busco un enemigo libre para generar la explosion
+ for (i=0;i<=max_ene;i++) if (enemigo[i].s_m>5) break;//si ya ha explotado
+enemigo[i].s_m=0;enemigo[i].X=x;enemigo[i].Y=y;
+
+
+//la mina
+  YO.x1=x-16;YO.y1=y-16;
+  YO.x2=x+32;YO.y2=y+32;
+//el tio0
+  EL.x1=play[0].H_x;EL.y1=play[0].H_y;
+  EL.x2=EL.x1+13;EL.y2=EL.y1+13;
+  if (HayInterseccion(YO,EL)) play[0].energia-=50;
+//el tio1
+  EL.x1=play[1].H_x;EL.y1=play[1].H_y;
+  EL.x2=EL.x1+13;EL.y2=EL.y1+13;
+  if (HayInterseccion(YO,EL)) play[1].energia-=50;
+//LOS ENEMIGOS
+  for (i=0;i<=max_ene;i++) {
+                  if (enemigo[i].energia<=0) continue;
+                  EL.x1=enemigo[i].X;EL.y1=enemigo[i].Y;
+                  EL.x2=EL.x1+13;EL.y2=EL.y1+13;
+                  if (HayInterseccion(YO,EL)) enemigo[i].energia-=50;
+                          }
+al_lado(prop+ancho);
+al_lado(prop-ancho);
+al_lado(prop+1);
+al_lado(prop-1);
+}
+void rompe_pared(long prop)
+{
+long x,y;
+propiedad[prop]++;mapa[prop]++;
+if (propiedad[prop]==13) propiedad[prop]=0;
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+
+}
+void  abrir(long prop)
+{
+long x,y;
+propiedad[prop]=0;
+mapa[prop]=343;//blindaje
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+// recursivo...
+if (propiedad[prop+ancho]==DOOR) abrir(prop+ancho);
+if (propiedad[prop-ancho]==DOOR) abrir(prop-ancho);
+if (propiedad[prop+1]==DOOR) abrir(prop+1);
+if (propiedad[prop-1]==DOOR) abrir(prop-1);
+}
+void ahogar()
+{
+sb_play(choff);
+play[jug].energia=-100; //la muerte ahogado marcada como -100
+}
+  void transportador(long estoy)
+{
+long prop;
+register int a,b;
+sb_play(transp_);
+for (b=mapaY+4;b<(MAX_Y/16)-4;b++)
+ for (a=mapaX+4;a<(MAX_X/16)-4;a++){
+  prop=(b*ancho)+a;if (prop==estoy) continue;//no proceso mi posicion actual
+  if (propiedad[prop]==TRANS) {//voy a el
+                              switch(veces%8){
+                              case 0:{prop-=ancho;break;}
+                              case 1:{prop-=(ancho+1);break;}
+                              case 2:{prop++;break;}
+                              case 3:{prop+=(ancho+1);break;}
+                              case 4:{prop+=ancho;break;}
+                              case 5:{prop+=(ancho-1);break;}
+                              case 6:{prop--;break;}
+                              case 7:{prop-=(ancho-1);break;}
+                                             }
+                              if (propiedad[prop]==0) { //No aparezco encima de nada
+                              play[jug].H_x=(prop%ancho)*16;
+                              play[jug].H_y=(prop/ancho)*16;
+                                           }
+                              return;
+                              }
+                      }
+
+}
+  void abre_trampa(long prop)
+{
+long x,y;
+// si es el muro conectado quitar
+if (propiedad[prop]==SOLIDOF) {
+   x=(prop % ancho)*16;
+   y=(prop / ancho)*16;
+   mapa[prop]=343;//blindaje
+   putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+                              }
+/*
+                              else
+if (propiedad[prop]==TRAMPA) {
+   x=(prop % ancho)*16;
+   y=(prop / ancho)*16;
+   mapa[prop]++;
+   putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+                             }
+*/
+   propiedad[prop]=0;
+// recursivo...
+if ((propiedad[prop+ancho]==TRAMPA)||(propiedad[prop+ancho]==CABLE)||(propiedad[prop+ancho]==SOLIDOF))
+     abre_trampa (prop+ancho);
+if ((propiedad[prop-ancho]==TRAMPA)||(propiedad[prop-ancho]==CABLE)||(propiedad[prop-ancho]==SOLIDOF))
+    abre_trampa (prop-ancho);
+if ((propiedad[prop+1]==TRAMPA)||(propiedad[prop+1]==CABLE)||(propiedad[prop+1]==SOLIDOF))
+    abre_trampa (prop+1);
+if ((propiedad[prop-1]==TRAMPA)||(propiedad[prop-1]==CABLE)||(propiedad[prop-1]==SOLIDOF))
+   abre_trampa (prop-1);
+}
+
+void coger(long prop)
+{
+long x,y;
+switch (propiedad[prop])
+ {
+ case LLAVE:{sb_play(llaves_);play[jug].llaves++;play[jug].puntos+=100;break;}
+ case POTF:
+ case POT:
+ {sb_play(pocion_);play[jug].pot++;play[jug].puntos+=100;break;}
+ case FOODF:
+ case FOOD:{sb_play(comer);play[jug].energia+=100;play[jug].puntos+=100;break;}
+ case VENENO:{play[jug].energia-=100;break;}
+ case ARMADURA:{if (play[jug].armadura>0) {play[jug].pot++;break;}
+                play[jug].armadura=5;//lo que protege la armadura
+                play[jug].puntos+=100;break;
+               }
+ case COMBATE:{if (play[jug].combate==TRUE) {play[jug].pot++;break;}
+                play[jug].combate=TRUE;
+                play[jug].puntos+=100;break;
+               }
+ case MAGIA:{if (play[jug].magia==TRUE) {play[jug].pot++;break;}
+                play[jug].magia=TRUE;
+                play[jug].puntos+=100;break;
+               }
+ case INMOVIL:{ inmovil=TRUE;play[jug].repulsivo=play[jug].invisible=FALSE;
+                init_crono(20);
+                play[jug].puntos+=100;break;
+               }
+ case REPULSIVO:{play[jug].repulsivo=TRUE;inmovil=play[jug].invisible=FALSE;
+                init_crono(20);
+                play[jug].puntos+=100;break;
+               }
+ case INVISIBLE:{play[jug].repulsivo=inmovil=FALSE;play[jug].invisible=TRUE;
+                init_crono(20);
+                play[jug].puntos+=100;break;
+               }
+
+
+ }
+propiedad[prop]=0;
+mapa[prop]++;// LA BALDOSA SIN EL OBJ ES LA SIGUIENTE
+x=(prop % ancho)*16;
+y=(prop / ancho)*16;
+putimage_CTRL(x-absolutoX,y-absolutoY,16,16,baldosas+(mapa[prop]*256),Pfondo);
+}
+//------------------------------------------------------------------------
+void analizaDER(char avance)
+{
+long prop;
+// Esquina superior derecha
+ prop=caracteristica(play[jug].H_x+camHV_X-4,play[jug].H_y+4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_x-=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_x-=avance;return;
+    }
+    case LLAVE:    
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;} 
+    }
+// Esquina inferior derecha
+ prop=caracteristica(play[jug].H_x+camHV_X-4,play[jug].H_y+camHV_Y-4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_x-=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_x-=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+}
+  void derecha()
+{
+play[jug].H_d=2;
+reposo=FALSE;
+}
+  void mueve_derecha()
+{
+if (play[jug].H_x-absolutoX>MAX_X-20) return;
+
+play[jug].H_x+=VEL;analizaDER(VEL);
+play[jug].H_s++;if (play[jug].H_s>camHV_F-1) play[jug].H_s=0;
+}
+void analizaIZQ(char avance)
+{
+long prop;
+
+// Esquina superior izquierda
+ prop=caracteristica(play[jug].H_x+4,play[jug].H_y+4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_x+=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_x+=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+
+// Esquina inferior derecha
+ prop=caracteristica(play[jug].H_x+4,play[jug].H_y+camHV_Y-4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_x+=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_x+=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+}
+  void izquierda()
+{
+play[jug].H_d=6;            
+reposo=FALSE;
+}
+  void mueve_izquierda()
+{
+if (play[jug].H_x-absolutoX<16) return;
+
+play[jug].H_x-=VEL;analizaIZQ(VEL);
+play[jug].H_s++;if (play[jug].H_s>camHV_F-1) play[jug].H_s=0;
+
+}
+void analizaARR(char avance)
+{
+long prop;
+
+// Esquina superior izquierda
+ prop=caracteristica(play[jug].H_x+4,play[jug].H_y+4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_y+=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_y+=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+// Esquina superiror derecha
+ prop=caracteristica(play[jug].H_x+camHV_X-4,play[jug].H_y+4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_y+=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_y+=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+}
+  void arriba()
+{
+if (play[jug].H_d==2) play[jug].H_d=1; else
+if (play[jug].H_d==6) play[jug].H_d=7; else play[jug].H_d=0;
+reposo=FALSE;
+}
+void mueve_arriba()
+{
+if (play[jug].H_y-absolutoY<16) return;
+play[jug].H_y-=VEL;analizaARR(VEL);
+play[jug].H_s++;if (play[jug].H_s>camHV_F-1) play[jug].H_s=0;
+}
+void analizaABJ(char avance)
+{
+long prop;
+
+// Esquina inferior izquierda
+  prop=caracteristica(play[jug].H_x+4,play[jug].H_y+camHV_Y-4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_y-=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+     else play[jug].H_y-=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+// Esquina inferior derecha
+ prop=caracteristica(play[jug].H_x+camHV_X-4,play[jug].H_y+camHV_Y-4);
+ switch (propiedad[prop])
+    {
+    case SOLIDOF:
+    case FRGL:
+    case FRGL+1:
+    case FRGL+2:
+    case GEN:
+    case SLD: {play[jug].H_y-=avance;return;}
+    case H2O: {ahogar();return;}
+    case DOOR:
+    {if (play[jug].llaves>0) {abrir(prop);play[jug].llaves--;}
+    else play[jug].H_y-=avance;return;}
+    case LLAVE:
+    case FOOD:
+    case FOODF:
+    case POTF:
+    case POT:
+    case ARMADURA:
+    case COMBATE:
+    case MAGIA:
+    case INMOVIL:
+    case REPULSIVO:
+    case INVISIBLE:
+    case VENENO:
+    {coger(prop);return;}
+    case TRAMPA:{sb_play(trampa);abre_trampa(prop);return;}
+    case MINA:{pisa_mina(prop);return;}
+    case TRANS:{transportador(prop);return;}
+    case EXT: {salir(prop);return;}
+    }
+}
+  void abajo()
+{
+if (play[jug].H_d==2) play[jug].H_d=3; else
+if (play[jug].H_d==6) play[jug].H_d=5; else play[jug].H_d=4;
+reposo=FALSE;
+}
+
+  void mueve_abajo()
+{
+signed int py;
+if (play[jug].H_y-absolutoY>MAX_Y-16) return;
+
+play[jug].H_y+=VEL;analizaABJ(VEL);
+play[jug].H_s++;if (play[jug].H_s>camHV_F-1) play[jug].H_s=0;
+}
+
+void scroll()
+{
+int ox,oy,Cjx,Cjy;
+ox=(absolutoX+(MAX_X/2))/16;
+oy=(absolutoY+(MAX_Y/2))/16;
+
+if ((play[0].level_end==FALSE) && (play[1].level_end==FALSE))
+      {Cjx=(play[0].H_x+play[1].H_x)/32;
+      Cjy=(play[0].H_y+play[1].H_y)/32;
+      } else
+{
+   if (play[0].level_end==FALSE)
+      {Cjx=play[0].H_x/16;
+       Cjy=play[0].H_y/16;
+      } else
+      {Cjx=play[1].H_x/16;
+       Cjy=play[1].H_y/16;
+      }
+}
+if (Cjx>ox) ponefondoDER(); else
+if (Cjx<ox) ponefondoIZQ();
+
+if (Cjy>oy) ponefondoABJ(); else
+if (Cjy<oy) ponefondoARR();
+}
+
+
+void poneH()
+{
+long x,y;
+int alto,ancho;
+char *ptro;
+x=play[jug].H_x;y=play[jug].H_y;//posiciones del h dentro del mapa
+x-=absolutoX;y-=absolutoY;//posicion del mapa
+switch (jug)
+ {
+ case 0:{
+        ancho=camHV_X;alto=camHV_Y;
+        ptro=camHV+(camHV_X*camHV_Y*8*play[jug].H_d)+(camHV_X*camHV_Y*play[jug].H_s);
+        break;
+        }
+ case 1:{
+        ancho=camHR_X;alto=camHR_Y;
+        ptro=camHR+(camHV_X*camHR_Y*8*play[jug].H_d)+(camHR_X*camHR_Y*play[jug].H_s);
+        break;
+        }
+ }
+putico_sombra(x+SOLx,y+SOLy,ancho,alto,ptro,Pvirtual);
+putico(x,y,ancho,alto,ptro,Pvirtual);
+}
+void secuencia_salir(char n)
+{
+jug=n;
+play[n].H_d=play[n].H_s_m;
+play[n].H_s_m++;
+poneH();
+if (play[n].H_s_m>7) {play[jug].H_x=play[jug].H_y=99999999;}
+}
+
+  void DAC2PTR(char *fichero,char *destino)
+{
+struct cabecera{
+unsigned int Xmax,Ymax,bytes;
+char haypaleta;
+               } dac;
+struct stat statbuf;
+char *Tbuffer,*imagen;
+long w,Vidoffset=0,ctrlbuffer=0;
+register int i,n;
+register char run,c;
+
+
+FILE *handle;
+stat (fichero,&statbuf);
+Tbuffer=(char *)malloc(statbuf.st_size);
+
+handle=fopen(fichero,"rb");
+fread(&dac.Xmax,1,2,handle);
+fread(&dac.Ymax,1,2,handle);
+fread(&dac.bytes,1,2,handle);
+fread(&dac.haypaleta,1,1,handle);
+imagen=(char *)malloc(dac.bytes*dac.Ymax);
+fread(Tbuffer,1,statbuf.st_size,handle);
+
+for (i=0;i<dac.Ymax;i++) {
+  n=0;
+  while (n<dac.bytes)
+  {
+  c=Tbuffer[ctrlbuffer];
+       ctrlbuffer++;
+   if ((c & 192)==192) //Es un caracter de ctrl de repeticion?
+    {
+       run=(c & 63);  //Quito el los 2 bytes superiores.
+       n+=run;
+       c=Tbuffer[ctrlbuffer];
+       ctrlbuffer++;
+       for (w=0;w<run;w++) {imagen[Vidoffset]=c;Vidoffset++;}
+    } else {n++; imagen[Vidoffset]=c;Vidoffset++;}
+  }//end while
+                            }//end for
+fclose(handle);
+movedata (ds,(int)imagen,ds,(int)destino,dac.bytes*dac.Ymax);
+free(imagen);
+free(Tbuffer);
+if (dac.haypaleta==1) {
+                       disk_paleta(fichero);                       
+                       pon_paleta();
+                      }
+}
+
+void espera()
+{
+unsigned char i;
+for (i=0;i<128;i++) if (KeyTable[i]==TRUE) return;
+}
+char dado(int x,int y,cuadro rec)//pixel a cuadrado
+{
+if ((x>rec.x1) && (x<rec.x2) && (y>rec.y1) && (y<rec.y2)) return TRUE;
+return FALSE;
+}
+
+  void disparar()
+{
+Tpuertas=0;
+ if (play[jug].D_d==255) {sb_play(disparo);
+                      play[jug].D_d=play[jug].H_d;
+                      play[jug].D_x=play[jug].H_x;
+                      play[jug].D_y=play[jug].H_y;
+                      play[jug].D_r=0;
+                     }
+}
+
+  void pon_disparo(int &D_x,int &D_y,int &D_r,unsigned char &D_d,int &puntos)
+{
+signed int x,y,i;
+long prop;
+if (D_d==255) return;
+switch (D_d){
+ case 0:{D_y-=arma_vel;break;}
+ case 1:{D_y-=arma_vel;D_x+=arma_vel;break;}
+ case 2:{D_x+=arma_vel;break;}
+ case 3:{D_y+=arma_vel;D_x+=arma_vel;break;}
+ case 4:{D_y+=arma_vel;break;}
+ case 5:{D_y+=arma_vel;D_x-=arma_vel;break;}
+ case 6:{D_x-=arma_vel;break;}
+ case 7:{D_y-=arma_vel;D_x-=arma_vel;break;}
+                  } 
+// se ha estrellado?
+prop=caracteristica(D_x+5,D_y+5);
+                                switch (propiedad[prop])
+                                {
+                                case SOLIDOF:
+                                case SLD:
+                                case FOOD:
+                                case POT:
+                                case DOOR:{sb_play(choque_);D_d=255;return;}
+                                case FRGL:
+                                case FRGL+1:
+                                case FRGL+2:
+                                {rompe_pared(prop);D_d=255;return;}
+                                case FOODF:
+                                case VENENO:
+                                {rompe_comida(prop);D_d=255;return;}
+                                case POTF:
+                                case MAGIA:
+                                {rompe_pot(prop);D_d=255;return;}
+                                case MINA:
+                                {pisa_mina(prop);D_d=255;return;}
+                                }
+x=D_x-absolutoX;y=D_y-absolutoY;
+if ((x>=0) && (x<MAX_X) && (y>=0) && (y<MAX_Y)) {
+                                                 putico (x,y,9,9,bola+(9*9*D_d),Pvirtual);
+                                                 putico_sombra (x+SOLx+2,y+SOLy+2,9,9,bola+(9*9*D_d),Pvirtual);
+                                                 //putpixel (x+5,y+5,15,Pvirtual);
+                                                }
+   else {D_d=255;return;}
+
+
+// he dado a alguien?
+//disparo
+  YO.x1=D_x;YO.y1=D_y;
+  YO.x2=D_x+9;YO.y2=D_y+9;
+
+ for (i=0;i<max_ene;i++) {
+  if (enemigo[i].energia<=0) continue;//los muertos no molestan
+  if (i==num) continue;//no me doy
+  EL.x1=enemigo[i].X;EL.y1=enemigo[i].Y;
+  EL.x2=EL.x1+16;EL.y2=EL.y1+16;
+  if (HayInterseccion(YO,EL)==TRUE) {D_d=255;
+                                   if (enemigo[i].tipo!=MUERTE) enemigo[i].energia-=arma_fuerza;
+                                   puntos+=arma_fuerza;
+                                   return;
+                                  }
+                        }
+
+//hE dado al generador?
+
+ for (gn=0;gn<max_gen;gn++){
+  if (generador[gn].energia<=0) continue;
+  EL.x1=generador[gn].X;EL.y1=generador[gn].Y;
+  EL.x2=EL.x1+16;EL.y2=EL.y1+16;
+  if (HayInterseccion(YO,EL)==TRUE) {
+                                  D_d=255;
+                                  generador[gn].energia-=arma_fuerza;
+                                  if (generador[gn].energia<=0) destruye_generador();
+                                  puntos+=arma_fuerza;
+                                  return;
+                                 }
+
+                        }
+
+D_r+=arma_vel;
+if (D_r>=arma_alcance) {D_d=255;return;}
+}
+  void mueve_hombre()
+{
+Tpuertas=0;
+ switch(play[jug].H_d)
+ {
+  case 0:{mueve_arriba();break;}
+  case 1:{mueve_arriba();mueve_derecha();break;}
+  case 2:{mueve_derecha();break;}
+  case 3:{mueve_derecha();mueve_abajo();break;}
+  case 4:{mueve_abajo();break;}
+  case 5:{mueve_abajo();mueve_izquierda();break;}
+  case 6:{mueve_izquierda();break;}
+  case 7:{mueve_izquierda();mueve_arriba();break;}
+ }                                 
+}
+void mueve_nubes()
+{
+int i;
+for (i=0;i<NUBES_MAX;i++)
+ {
+ if (nube[i].activa==TRUE) {
+                          nube[i].y-=nube[i].vel;nube[i].x++;
+                          putico_sombra_CTRL(nube[i].x-absolutoX+(SOLx*10),nube[i].y-absolutoY+(SOLy*10),nube[i].Lx,nube[i].Ly,nube[i].ptro,Pvirtual);
+                          putico_CTRL(nube[i].x-absolutoX,nube[i].y-absolutoY,nube[i].Lx,nube[i].Ly,nube[i].ptro,Pvirtual);
+                          if ((nube[i].x<absolutoX-CAMPOX) || (nube[i].x>absolutoX+MAX_X+CAMPOX)) nube[i].activa=FALSE;
+                          if ((nube[i].y<absolutoY-CAMPOY) || (nube[i].y>absolutoY+MAX_Y+CAMPOY)) nube[i].activa=FALSE;
+                          }
+ }
+}
+void init_nube()
+{
+int i;
+for (i=0;i<=NUBES_MAX;i++)
+{
+ if ((nube[i].activa==FALSE) && (veces%100==0)) {
+                             nube[i].activa=TRUE;
+                             nube[i].x=absolutoX+rand()%MAX_X;nube[i].y=absolutoY+(MAX_Y+CAMPOY);
+                            }
+}
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+//ßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßß
+void init_players()
+{
+crono=-100;
+KeyTable[ESC]=FALSE;
+play[0].H_s_m=play[1].H_s_m=0;
+play[0].llaves=play[1].llaves=0;
+play[0].pot=play[1].pot=0;
+play[0].armadura=play[1].armadura=0;
+play[0].combate=play[1].combate=play[0].magia=play[1].magia=FALSE;
+
+play[0].repulsivo=play[1].repulsivo=FALSE;
+play[0].invisible=play[1].invisible=TRUE;//por defecto no se ven
+inmovil=inmune=FALSE;
+
+play[0].energia=2000;
+
+ play[1].H_x=9999999;
+ play[1].H_y=9999999;
+ play[1].energia=0;
+ play[1].H_s_m=play[0].H_s_m=9;
+  play[1].level_end=TRUE; //si no juego ya termino el nivel.
+ play[0].level_end=FALSE;
+ play[0].invisible=FALSE;
+if (PLAYERS==2) {play[1].H_x=play[0].H_x+16;
+                 play[1].H_y=play[0].H_y+16;
+                 play[1].energia=2000;
+                 play[1].level_end=FALSE;
+                 play[1].invisible=FALSE;
+                 }
+}
+char menu()
+{
+signed char op=0;
+char frm=0,*Panima;
+unsigned char i;
+Modo_video(0x101);//este modo para menus
+Pmenus=(char *)malloc(640*480);
+Panima=(char *)malloc(640*480);
+DAC2PTR("menu1.dac",Pmenus);menu2SVGA((int)Pmenus);
+//DAC2PTR("menu.dac",Pmenus);menu2SVGA((int)Pmenus);
+do{
+  movedata (ds,(int)Pmenus,ds,(int)Panima,640*480);
+  putico(150,(80*op)+70,63,63,cursor+(63*63*frm),Panima);
+  if (KeyTable[ABJ]==TRUE) {op++;if (op>3) op=0;} else
+  if (KeyTable[ARR]==TRUE) {op--;if (op<0) op=3;}  
+  frm++;if (frm>11) frm=0;  
+  menu2SVGA((int)Panima);
+  delay(10);
+  if (KeyTable[ESC]) {op=3;KeyTable[ENTER]=TRUE;}
+  }while (KeyTable[ENTER]==FALSE);
+  free(Pmenus);free(Panima);
+  for (i=0;i<118;i++) {black_hole(116);delay(2);}
+//  to_black();fade_to(2);
+return (op);
+}
+void ayuda()
+{
+Pmenus=(char *)malloc(640*480);
+DAC2PTR("ayuda.dac",Pmenus);menu2SVGA((int)Pmenus);
+do{}while (KeyTable[ESC]==FALSE);
+free(Pmenus);
+}
+void creditos()
+{
+register int x,y;
+char c;
+Pmenus=(char *)malloc(640*480);
+to_black();pon_paleta();
+DAC2PTR("overflow.dac",Pmenus);menu2SVGA((int)Pmenus);
+//poneletra_BIG(165,130,"Overflow",Pmenus,640);
+//poneletra_BIG(220,180,"Presents",Pmenus,640);
+//         menu2SVGA((int)Pmenus);
+//if (SB==TRUE) {sb_play(sonido); delay(4100);}
+//to_white();pon_paleta();
+//to_black();paleta[15][0]=paleta[15][1]=paleta[15][2]=63;
+fade_to(30);
+delay(1000);
+to_black();fade_to(40);
+DAC2PTR("harmful.dac",Pmenus);menu2SVGA((int)Pmenus);
+delay(500);
+to_black();fade_to(40);
+DAC2PTR("bicho.dac",Pmenus);menu2SVGA((int)Pmenus);
+delay(1000);
+to_black();fade_to(40);
+free(Pmenus);
+}
+
+void init_level()
+{
+ absolutoX=absolutoY=mapaX=mapaY=0;
+level_ac++;
+carga_level(level_ac);
+//init_enemigos();
+pone_fondo_completo();
+lineaAlinea();
+putico_escala(play[0].H_x-absolutoX,play[0].H_y-absolutoY,13,13,camHV,Pvirtual,5);
+                        sprintf(cadena,"LEVEL %u",level_ac);
+ poneletra_BIG(175,130,cadena,Pvirtual,15);
+
+// sprintf (cadena,"Build by: %s   %u m2",autor,ancho*alto);
+// pontext_M (10,3,cadena);
+ 
+         volcado2SVGA((int)Pvirtual);
+delay(2000);
+//pixelize();
+Tpuertas=0;
+}
+void finaliza_level()
+{
+ if ((play[0].energia<=0) && (play[1].energia<=0)) {KeyTable[ESC]=TRUE;return;}
+ if ((play[0].H_s_m<8) || (play[1].H_s_m<8)) return;
+ play[0].level_end=play[1].level_end=FALSE;
+ free(mapa);
+ free(propiedad);
+ init_level();
+ play[1].H_x=play[0].H_x+16;
+ play[1].H_y=play[0].H_y+16;
+}
+
+#include "enjuego.cc"
+void BUG_WINDOWS()
+{
+delay(WS);
+  VOLCAR=TRUE;
+  tic ++;crono--;
+  if (tic==TICS_SEG)  {
+   tic=0;Tpuertas++;//cronometro++;
+    if (play[0].level_end==FALSE) play[0].energia--;
+    if (play[1].level_end==FALSE) play[1].energia--;
+   frames_por_seg=veces-old_veces;
+   old_veces=veces;
+//   if (frames_por_seg>limite_frames) retardo++; else if (retardo>0) retardo--;
+               }
+}
+void jugar()
+{
+char estupidez;
+Pmenus=(char *)malloc(640*480);
+DAC2PTR("start.dac",Pmenus);menu2SVGA((int)Pmenus);
+sprintf (cadena,"Hello intrepid warrior{ Are you");
+         estupidez=poneabc(50,100,cadena,Pmenus,FALSE);
+sprintf (cadena,"ready for rescue to the princess");
+         poneabc(50,120,cadena,Pmenus,estupidez);
+sprintf (cadena,"Leia from the Dark Castle?");
+         poneabc(50,140,cadena,Pmenus,estupidez);
+sprintf (cadena,"Them come on||||");
+         poneabc(50,160,cadena,Pmenus,estupidez);
+        delay(500);
+free(Pmenus);
+Modo_video(V_D_J);
+if (SB==TRUE) sb_set_sample_rate(8000);
+disk_paleta("paleta.1");pon_paleta();
+level_ac=0;
+init_level();
+init_players();
+delay(1000);
+inicio=clock();
+do {
+          //el fondo antes que los sprites
+         movedata (ds,(int)Pfondo,ds,(int)Pvirtual,MAX_X*MAX_Y);
+         for (gn=0;gn<max_gen;gn++) activa_generador();
+         mueve_players();
+         if (play[0].H_s_m<8) secuencia_salir(0);
+         if (play[1].H_s_m<8) secuencia_salir(1);
+         init_nube();mueve_nubes();         
+         scroll();
+         if (marcador) pon_marcador();
+         if (Tpuertas==PUERTAS) puertas();
+        if (crono>-1) actualiza_crono();
+        if (WINDOWS==1) BUG_WINDOWS();
+        do {estupidez++;} while (VOLCAR==FALSE); //Freeeeeeeenaaaaaaa
+         sprintf (cadena,"%u",estupidez);
+                  pontextXY(100,1,cadena,miniFNT);
+
+        volcado2SVGA((int)Pvirtual);
+        VOLCAR=FALSE;veces++;
+        rotar();
+        if (play[0].energia<=0) {
+                                 play[0].H_x=play[0].H_y=9999999;
+                                 play[0].level_end=TRUE;
+                                }
+        if (play[1].energia<=0) {play[1].H_x=play[1].H_y=9999999;
+                                 play[1].level_end=TRUE;
+                                }
+        if ((play[0].level_end==TRUE) && (play[1].level_end==TRUE)) finaliza_level();
+   } while (KeyTable[ESC]==FALSE);
+KeyTable[ESC]=FALSE;
+final=clock();
+to_gray();fade_to(40);
+delay(125);sb_play(risa);
+}
+void copyright()
+{
+int i,sum=0;
+for (i=3;i<=14;i++) sum=MNBR[i]+sum;
+if (sum!=1150) exit(0);
+}
+main()
+{
+//*****************************************
+rojos_R1[0]=63;rojos_R1[1]=50;rojos_R1[2]=35;
+rojos_R2[0]=50;rojos_R2[1]=35;rojos_R2[2]=63;
+verdes_G[0]=63;verdes_G[1]=50;verdes_G[2]=35;
+
+printf ("¯ Physical memory: %u Kb\n",_go32_dpmi_remaining_physical_memory()/1024);
+printf ("¯ Virtual memory: %u Kb\n\n",_go32_dpmi_remaining_virtual_memory()/1024);
+
+InitTeclado();
+InitRitmo();
+Initctes();
+if (SB==TRUE) {sb_init();sb_set_sample_rate(13000);}              
+
+//**************************************
+printf("¯ Loading:");
+carga();
+printf("\n");
+printf("¯ Malloc Pvirtual.\n");
+Pvirtual=(char *)malloc(MAX_X*(MAX_Y+16));
+printf("¯ Malloc Pfondo.\n");
+Pfondo=(char *)malloc(MAX_X*(MAX_Y+16));//16 margen para scrolls
+ds=_go32_my_ds();conv=_go32_conventional_mem_selector();
+printf("¯ Selector DS 0x%x Conventional 0x%x.\n",ds,conv);
+copyright();
+delay(2000);
+Modo_video(0x101);//este modo para menus
+creditos();
+sb_play(trampa);
+do{
+switch(menu())
+ {
+ case 0:{jugar();break;}
+ case 2:{ayuda();break;}
+ case 3:{end=TRUE;break;}
+ }
+   }while (end==FALSE);
+
+//++++++++++++++++++++++++++++++++++
+Modo_video(0x3);
+TecladoOFF();
+RitmoOFF();
+if (SB==TRUE) sb_cleanup();
+//++++++++++++++++++++++++++++++++++
+free(Pfondo);free(Pvirtual);free(mapa);free(baldosas);free(propiedad);free(bigFNT);
+printf("veces=%u,mapaX=%u,mapaY=%u,%u,%u,Tiempo:%ld/%ld\n",veces,mapaX,mapaY,ancho,alto,(final-inicio),CLOCKS_PER_SEC);
+printf("%s  %s\n",__DATE__,__TIME__);
+printf("%s\n",MNBR);
+printf("################################\n");
+printf("###Graficos: Javi Caballero ####\n");
+printf("###          Bones          ####\n");
+printf("###          Borja Boyero   ####\n");
+printf("################################\n");
+return 0;
+}
+//#######################################################################
+//#######################################################################
+//#######################################################################
+//#######################################################################
+
+ 

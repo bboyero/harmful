@@ -1,0 +1,15 @@
+copy a.exe %1
+copy go32.exe %1
+copy harmful.ini %1
+copy fondo.1 %1
+copy paleta.1 %1
+copy big %1
+copy mini %1
+copy midle %1
+copy abc %1
+copy anima.frm %1
+copy *.dac %1
+copy sonido.dat %1
+copy mobj.dat %1
+copy mapa.* %1
+copy nubes.dat %1

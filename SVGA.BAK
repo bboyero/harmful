@@ -1,0 +1,396 @@
+
+/*
+long *MAX_Xx;
+void precalculo()
+{
+int i;
+MAX_Xx=(long *)malloc((MAX_Y+16)*sizeof(long));
+for (i=0;i<(MAX_Y+16);i++) MAX_Xx[i]=MAX_X*i;
+//donde[(MAX_X[y])+x]=color;
+}*/
+int PrEvIo=rand();
+  unsigned int rnd()
+{
+return(PrEvIo=(PrEvIo*75)+74);
+}
+  void putpixel_G(int x,int y,unsigned char color,unsigned char *donde,int coory)
+{
+donde[(coory*y)+x]=color;
+}
+
+  void putpixel(int x,int y,unsigned char color,unsigned char *donde)
+{
+donde[(MAX_X*y)+x]=color;
+}
+
+
+  char getpixel(int x,int y,unsigned char *donde)
+{
+return donde[(MAX_X*y)+x];
+}
+  void Hline (int x,int y,int l,unsigned char color,unsigned char *donde)
+{
+register int i;
+char *aux;
+aux=donde+(MAX_X*y)+x;
+for (i=0;i<l;i++) aux[i]=color;
+}
+  void Vline (int x,int y,int l,unsigned char color,unsigned char *donde)
+{
+register int i;
+char *aux;
+aux=&donde[(MAX_X*y)+x];
+for (i=0;i<l;i++) aux[MAX_X*i]=color;
+}
+
+  void putico(int x,int y,int LX,int LY,unsigned char *origen,unsigned char *destino)
+{
+register int cx,cy;
+destino+=(y*MAX_X)+x;
+for (cy=y;cy<LY+y;cy++){
+ for (cx=x;cx<LX+x;cx++) {                  
+                  if (*origen!=0) *destino=*origen;
+                  origen++;destino++;
+                         }
+    destino+=(MAX_X-LX);}
+}
+
+  void putico_sombra(int x,int y,int LX,int LY,unsigned char *origen,unsigned char *destino)
+{
+register int cx,cy;
+unsigned char color;
+destino+=(y*MAX_X)+x;
+for (cy=y;cy<LY+y;cy++){
+ for (cx=x;cx<LX+x;cx++) {
+                  if (*origen!=0)
+                   {
+                   color=*destino+GRADIENTE;
+                   if (color<128) color+=128;
+                   *destino=color;
+                   }
+                  origen++;destino++;
+                      }
+ destino+=(MAX_X-LX);}
+}
+  void putico_CTRL(signed int x,signed int y,int LX,int LY,unsigned char *origen,unsigned char *destino)
+{
+register int cx,cy;
+destino+=(y*MAX_X)+x;
+for (cy=y;cy<LY+y;cy++){
+ for (cx=x;cx<LX+x;cx++) {                  
+                  if (*origen!=0)
+                   if( (cx>=0) && (cx<MAX_X) && (cy>=0) && (cy<MAX_Y) )                  
+                      //putpixel (cx,cy,*origen,destino);
+                      *destino=*origen;
+                  origen++;destino++;
+                         }
+    destino+=(MAX_X-LX);}
+}
+  void putico_sombra_CTRL(signed int x,signed int y,int LX,int LY,unsigned char *origen,unsigned char *destino)
+{
+register int cx,cy;
+unsigned char color;
+destino+=(y*MAX_X)+x;
+for (cy=y;cy<LY+y;cy++){
+ for (cx=x;cx<LX+x;cx++) {
+                  if (*origen!=0)
+                   if( (cx>=0) && (cx<MAX_X) && (cy>=0) && (cy<MAX_Y) )
+                   {
+                   color=*destino+GRADIENTE;
+                   //color=getpixel(cx,cy,Pvirtual)+GRADIENTE;
+                   if (color<128) color+=128;
+                   *destino=color;
+                   //putpixel (cx,cy,color,destino);
+                   }
+                  origen++;destino++;
+                      }
+ destino+=(MAX_X-LX);}
+}
+
+void Modo_video(int modo)
+{
+Video_banco=255;//des-inicializo
+if (modo<0x100) {
+r.x.ax=modo;
+_go32_dpmi_simulate_int(0x10,&r);
+                 } else
+                 {
+//-----------------Pongo el modo VESA y scan 1024-------------
+r.x.ax=0x4F02;
+r.x.bx=modo;//640x480x256
+_go32_dpmi_simulate_int(0x10,&r);
+                } 
+}
+  void wait_retaze()
+{
+/*
+asm("                         
+        mov    $0x3da,%dx     
+label01:                       
+        inb     %dx,%al        
+        and     $0x8,%al
+        jnz     label01        
+label02:                      
+        inb     %dx,%al        
+        and     $0x8,%al      
+        jz      label02      
+    ");
+
+
+
+while (inportb(0x3da)&8==8) {};
+while (inportb(0x3da)&8!=8) {};*/
+
+
+}
+  void Getpal(unsigned char color,unsigned char &r,unsigned char &g,unsigned char &b)
+{
+ outportb(0x3c7,color);
+ r=inportb(0x3c9);
+ g=inportb(0x3c9);
+ b=inportb(0x3c9);
+}
+  void Setpal (unsigned char color,unsigned char r,unsigned char g,unsigned char b)
+{
+/*
+ asm ("movb $0x3c8,%dx
+       movb _color,%ax
+       outb %al,%dx
+       incb %dx
+       movb _r,%ax
+       outb %ax,%dx
+       movb _g,%ax
+       outb %ax,%dx
+       movb _b,%ax
+       outb %ax,%dx
+      ");
+*/
+ outportb(0x3c8,color);
+ outportb(0x3c9,r);
+ outportb(0x3c9,g);
+ outportb(0x3c9,b);
+}
+
+void gamma_mas()
+{
+unsigned char i,r,b,g;
+  for (i=0;i<255;i++)
+ {
+ Getpal(i,r,g,b);
+ //if ((r<63)&&(g<63)&&(b<63))
+ r++,g++,b++;
+ Setpal(i,r,g,b);
+ }
+}
+void gamma_menos()
+{
+unsigned char i,r,g,b;
+  for (i=0;i<255;i++)
+ {
+ Getpal(i,r,g,b);
+ //if ((r>0)&&(g>0)&&(b>0))
+ r--;g--;b--;
+ Setpal(i,r,g,b);
+ }
+
+}
+
+  void banco(char b)
+{
+r.x.ax=0x4F05;
+r.x.bx=0;
+r.x.dx=b;
+_go32_dpmi_simulate_int(0x10,&r);
+
+/*
+asm ("
+     mov $0x4f05,%ax
+     xor %bx,%bx
+     mov _b,%bx
+     int $0x10
+    ");
+*/
+}
+
+  char getpixelVGA(int x,int y)
+{
+long offset;
+char bank;
+offset=(MAX_X*y)+x;
+bank=(offset >> 16);
+offset-=(bank << 16);
+if (bank!=Video_banco) {banco(bank);
+                        Video_banco=bank;
+                        }
+return VGA[offset];
+}
+  void putpixelVGA(int x,int y,char color)
+{
+long offset;
+char bank;
+
+offset=(MAX_X*y)+x;
+bank=(offset >> 16);
+offset-=(bank << 16);
+if (bank!=Video_banco) {banco(bank);
+                        Video_banco=bank;
+                        }
+VGA[offset]=color;
+}
+
+  void volcado2SVGA (int origen)
+{
+switch (V_D_J) {
+  case 0x13: {movedata (ds,(int)origen,conv,VGAreal,64000);return;}
+  case 0x100: {//640x400
+  banco(0);movedata (ds,(int)origen,conv,VGAreal,64*1024);
+  banco(1);movedata (ds,(int)origen+65536,conv,VGAreal,64*1024);
+  banco(2);movedata (ds,(int)origen+(65536*2),conv,VGAreal,64*1024);
+  banco(3);movedata (ds,(int)origen+(65536*3),conv,VGAreal,64*1024);
+  Video_banco=3;return;
+              }
+  case 0x101: {//640x480
+  banco(0);movedata (ds,(int)origen,conv,VGAreal,64*1024);
+  banco(1);movedata (ds,(int)origen+65536,conv,VGAreal,64*1024);
+  banco(2);movedata (ds,(int)origen+(65536*2),conv,VGAreal,64*1024);
+  banco(3);movedata (ds,(int)origen+(65536*3),conv,VGAreal,64*1024);
+  banco(4);movedata (ds,(int)origen+(65536*4),conv,VGAreal,45056);
+  Video_banco=4;return;
+              }
+  case 0x103: {//800x600
+  banco(0);movedata (ds,(int)origen,conv,VGAreal,64*1024);
+  banco(1);movedata (ds,(int)origen+65536,conv,VGAreal,64*1024);
+  banco(2);movedata (ds,(int)origen+(65536*2),conv,VGAreal,64*1024);
+  banco(3);movedata (ds,(int)origen+(65536*3),conv,VGAreal,64*1024);
+  banco(4);movedata (ds,(int)origen+(65536*4),conv,VGAreal,64*1024);
+  banco(5);movedata (ds,(int)origen+(65536*5),conv,VGAreal,64*1024);
+  banco(6);movedata (ds,(int)origen+(65536*6),conv,VGAreal,64*1024);
+  banco(7);movedata (ds,(int)origen+(65536*7),conv,VGAreal,21248);
+  Video_banco=7;return;
+              }
+  case 0x105: {//1024x768
+  banco(0);movedata (ds,(int)origen,conv,VGAreal,64*1024);
+  banco(1);movedata (ds,(int)origen+65536,conv,VGAreal,64*1024);
+  banco(2);movedata (ds,(int)origen+(65536*2),conv,VGAreal,64*1024);
+  banco(3);movedata (ds,(int)origen+(65536*3),conv,VGAreal,64*1024);
+  banco(4);movedata (ds,(int)origen+(65536*4),conv,VGAreal,64*1024);
+  banco(5);movedata (ds,(int)origen+(65536*5),conv,VGAreal,64*1024);
+  banco(6);movedata (ds,(int)origen+(65536*6),conv,VGAreal,64*1024);
+  banco(7);movedata (ds,(int)origen+(65536*7),conv,VGAreal,64*1024);
+  banco(8);movedata (ds,(int)origen+(65536*8),conv,VGAreal,64*1024);
+  banco(9);movedata (ds,(int)origen+(65536*9),conv,VGAreal,64*1024);
+  banco(10);movedata (ds,(int)origen+(65536*10),conv,VGAreal,64*1024);
+  banco(11);movedata (ds,(int)origen+(65536*11),conv,VGAreal,64*1024);
+  
+
+              }
+               }
+}
+  void menu2SVGA (int origen)
+{
+  banco(0);movedata (ds,(int)origen,conv,VGAreal,64*1024);
+  banco(1);movedata (ds,(int)origen+65536,conv,VGAreal,64*1024);
+  banco(2);movedata (ds,(int)origen+(65536*2),conv,VGAreal,64*1024);
+  banco(3);movedata (ds,(int)origen+(65536*3),conv,VGAreal,64*1024);
+  banco(4);movedata (ds,(int)origen+(65536*4),conv,VGAreal,45056);
+  Video_banco=4;                     
+}
+
+void fcloseg (FILE *hand)
+{printf(".");fclose(hand);}
+
+void cargaFNT()
+{
+FILE *hand;
+struct stat statbuf;
+
+miniFNT=(char *)malloc(2048);
+hand=fopen("mini","rb");
+fread(miniFNT,1,2048,hand);
+fcloseg(hand);
+
+stat ("big",&statbuf);
+bigFNT=(char *)malloc(statbuf.st_size);
+hand=fopen("big","rb");
+fread(bigFNT,1,statbuf.st_size,hand);
+fcloseg(hand);
+
+midleFNT=(char *)malloc(34*3*9*11);
+hand=fopen("midle","rb");
+fread(midleFNT,1,34*3*9*11,hand);
+fcloseg (hand);
+
+stat ("abc",&statbuf);
+abcFNT=(char *)malloc(statbuf.st_size);
+hand=fopen("abc","rb");
+fread(abcFNT,1,statbuf.st_size,hand);
+fcloseg(hand);
+
+}
+char poneabc(int Coorx,int Coory,char *ascii,char *destino,char nodelay)
+{
+unsigned char lon,i;
+for (lon=0;lon<strlen(ascii);lon++) {
+            for (i=0;i<128;i++) if (KeyTable[i]==TRUE) nodelay=TRUE;
+            if (nodelay==FALSE) delay(400-rand()%3*130);
+if (ascii[lon]==32) continue;//espacio
+            putico(lon*16+Coorx,Coory,16,16,abcFNT+((ascii[lon]-48)*256),destino);
+            menu2SVGA((int)destino);
+                                    }
+return (nodelay);
+}
+void poneletra_BIG(int Coorx,int Coory,char *ascii,char *destino,int cx)
+{
+register unsigned int x,y,pos;
+char lon,buff;
+register unsigned int pixel;
+unsigned int xmayor,xreal=0;
+
+for (lon=0;lon<strlen(ascii);lon++) {
+pixel=0;xmayor=0;
+if (ascii[lon]==32) {xreal+=10;continue;} //tamaño del espacio.
+ascii[lon]=ascii[lon]-33;
+for (y=Coory+0;y<Coory+55;y++)
+ for (x=0;x<52;x++){
+  if (cx==320) x++;
+         pos=(ascii[lon]*52*55)+(pixel);
+         buff=bigFNT[pos/8] & byte[pos%8];
+                                          if (buff!=0) {
+                                                  destino[(y*cx)+x+xreal+Coorx]=15;
+                                                  //putpixel(x+xreal+Coorx,y,15,destino);
+                                                  if (x>xmayor) xmayor=x;
+                                                       }
+            pixel++;}                              
+          xreal+=xmayor;}
+}
+void pontextXY (unsigned int X,unsigned int Y,char *texto,char *fuente)
+{
+register unsigned char i,j,lon;
+register unsigned int c;
+for (lon=0;lon<=strlen(texto);lon++) {
+c=texto[lon]<<3;
+for (j=0;j<8;j++)
+ for (i=0;i<8;i++)
+       if ( (fuente[c+i] & byte[j])!=0) putpixel (X+j,Y+i,15,Pvirtual);
+       X+=5;
+                                     }
+}
+void pontext_M (unsigned int X,unsigned int Y,char *texto)
+{
+register char lon,i,j;
+int ltr,pixel;
+char *ptro;
+
+for (lon=0;lon<=strlen(texto);lon++) {
+ ptro=midleFNT+((texto[lon]-33)*11*9);
+ ltr=0;pixel=0;
+ for (j=0;j<11;j++)
+  for (i=0;i<9;i++) {
+             if (ptro[pixel]!=0) {putpixel (X+i,Y+j,ptro[pixel],Pvirtual);
+                                  ltr=i;
+                                 }
+                    pixel++;
+                    }
+                            X+=ltr;X+=2;
+                                     }
+}
