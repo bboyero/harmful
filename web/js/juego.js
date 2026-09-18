@@ -22,7 +22,7 @@ import { activateGenerator, destroyGenerator } from './generado.js';
 import { startCrono, updateCrono } from './crono.js';
 import { rotatePalette, restorePalette, whiteFlash } from './paleta.js';
 import { initNube, mueveNubes } from './nubes.js';
-import { play } from './sonido.js';
+import { play, vibrar } from './sonido.js';
 
 // ---------------------------------------------------------------------------
 // Jugador
@@ -301,7 +301,7 @@ export function pickUp(prop) {
     case POT: play('pocion'); p.pot++; p.puntos += 100; break;
     case FOODF:
     case FOOD: play('comer'); p.energia += 100; p.puntos += 100; break;
-    case VENENO: p.energia -= 100; break;
+    case VENENO: p.energia -= 100; vibrar(60); break;
     case ARMADURA:
       if (p.armadura > 0) { p.pot++; break; }
       p.armadura = 5; p.puntos += 100; break;
@@ -346,10 +346,16 @@ export function stepOnMine(prop) {
   const x = (prop % E.ancho) * 16;
   const y = ((prop / E.ancho) | 0) * 16;
   const YO = { x1: x - 16, y1: y - 16, x2: x + 32, y2: y + 32 };
-  if (hayInterseccion(YO, { x1: E.play[0].H_x, y1: E.play[0].H_y, x2: E.play[0].H_x + 13, y2: E.play[0].H_y + 13 }))
+  let alcanzado = false;
+  if (hayInterseccion(YO, { x1: E.play[0].H_x, y1: E.play[0].H_y, x2: E.play[0].H_x + 13, y2: E.play[0].H_y + 13 })) {
     E.play[0].energia -= 50;
-  if (hayInterseccion(YO, { x1: E.play[1].H_x, y1: E.play[1].H_y, x2: E.play[1].H_x + 13, y2: E.play[1].H_y + 13 }))
+    alcanzado = true;
+  }
+  if (hayInterseccion(YO, { x1: E.play[1].H_x, y1: E.play[1].H_y, x2: E.play[1].H_x + 13, y2: E.play[1].H_y + 13 })) {
     E.play[1].energia -= 50;
+    alcanzado = true;
+  }
+  if (alcanzado) vibrar([80, 40, 120]); // la mina alcanzó al jugador
   for (let i = 0; i < max_ene; i++) {
     if (E.enemigo[i].energia <= 0) continue;
     if (hayInterseccion(YO, { x1: E.enemigo[i].X, y1: E.enemigo[i].Y, x2: E.enemigo[i].X + 13, y2: E.enemigo[i].Y + 13 }))
@@ -451,6 +457,7 @@ export function openTrap(prop) {
 export function drown() {
   play('choff');
   E.play[E.jug].energia = -100;
+  vibrar([100, 50, 200]); // golpe fuerte: ahogamiento
 }
 
 // transportador: teletransporte a otra TRANS visible

@@ -4,7 +4,7 @@ import { MAX_X, MAX_Y, max_ene, rabia, SOLDADO, MAGO, FANTASMA, MUERTE,
 import { E } from './estado.js';
 import { blitSpriteClipped, blitSpriteShadowClipped } from './render.js';
 import { mapIndexAt } from './mapa.js';
-import { play, isPlaying } from './sonido.js';
+import { play, isPlaying, vibrar } from './sonido.js';
 
 // HayInterseccion con la lógica asimétrica del C (elige la anchura del rectángulo
 // cuyo x1/y1 es mayor)
@@ -150,15 +150,17 @@ export function enemyWander() {
   }
 }
 
-// quejarse: sonido aleatorio de daño, solo si no suena nada (resto_sample==0)
+// quejarse: sonido aleatorio de daño, solo si no suena nada (resto_sample==0).
+// Devuelve true si ha sonado el grito (para hacer la vibración más intensa).
 function quejarse() {
   if (!isPlaying()) {
-    switch ((Math.random() * 20) | 0) {
-      case 1: play('dado1'); break;
-      case 2: play('dado2'); break;
-      case 3: play('dado3'); break;
+    const n = (Math.random() * 20) | 0;
+    if (n >= 1 && n <= 3) {
+      play('dado' + n);
+      return true; // grito
     }
   }
+  return false;
 }
 
 // compruebo_choquesE: daño por contacto según tipo
@@ -170,26 +172,33 @@ export function comprueboChoquesE() {
     // (el C no toca ultimo aquí — la línea está comentada)
   }
   if (choque(0)) {
+    const antes = E.play[0].energia;
     switch (e.tipo) {
       case SOLDADO:
       case MAGO:     if (E.veces % rabia === 0) E.play[0].energia -= (e.F_cuerpo - E.play[0].armadura); break;
       case FANTASMA: e.energia = 0; E.play[0].energia -= (e.F_cuerpo - E.play[0].armadura); break;
       case MUERTE:   play('electr'); E.play[0].energia -= e.F_cuerpo; e.energia--; break;
     }
-    quejarse();
+    if (E.play[0].energia !== antes) {
+      // golpe recibido: vibración; más intensa si suena el grito
+      vibrar(quejarse() ? [60, 40, 150] : 45);
+    }
     e.secuencia = E.backs;
     e.X = E.backx; e.Y = E.backy;
     e.ultimo = 255;
     return;
   }
   if (choque(1)) {
+    const antes = E.play[1].energia;
     switch (e.tipo) {
       case SOLDADO:
       case MAGO:     if (E.veces % rabia === 0) E.play[1].energia -= (e.F_cuerpo - E.play[1].armadura); break;
       case FANTASMA: e.energia = 0; E.play[1].energia -= (e.F_cuerpo - E.play[1].armadura); break;
       case MUERTE:   play('electr'); E.play[1].energia -= e.F_cuerpo; e.energia--; break;
     }
-    quejarse();
+    if (E.play[1].energia !== antes) {
+      vibrar(quejarse() ? [60, 40, 150] : 45);
+    }
     e.secuencia = E.backs;
     e.X = E.backx; e.Y = E.backy;
     e.ultimo = 255;

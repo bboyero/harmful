@@ -25,3 +25,6 @@
 # desaparece, el release arranca con la pantalla negra.
 -keep class com.getcapacitor.** { *; }
 -dontwarn com.getcapacitor.**
+
+# Plugin propio de vibración (instanciado por reflexión desde registerPlugin)
+-keep class com.boyero.harmful.VibrarPlugin { *; }

@@ -7,15 +7,15 @@
 import { TICK_MS, SC_ESC, SC_ENTER } from './ctes.js';
 import { E } from './estado.js';
 import { fetchAssets } from './assets.js';
-import { initPalette, applyPalette, paletteToGray, restorePalette } from './paleta.js';
+import { initPalette, applyPalette, paletteToBlack, fadeToGray, fadeInGray, restorePalette } from './paleta.js';
 import { present, resizeCanvas, cargarBezel } from './render.js';
 import { initKeyboard } from './entrada.js';
 import { initTouch, recolocarControles } from './entrada-tactil.js';
 import { initLevel } from './nivel.js';
 import { gameTick, initPlayers } from './juego.js';
 import { drawTextBig } from './fuente.js';
-import { cargarMenus, creditos, menu, startScreen, ayuda, salir, modo, modoActual } from './menu.js';
-import { loadSounds, play } from './sonido.js';
+import { cargarMenus, creditos, menu, startScreen, ayuda, salir, modo, modoActual, gameOverPix } from './menu.js';
+import { loadSounds, play, vibrar, empezarMusica, pararMusica } from './sonido.js';
 
 const params = new URLSearchParams(location.search);
 const LEVEL_INICIAL = parseInt(params.get('mapa'), 10) || 1;
@@ -34,6 +34,9 @@ function setEstado(nuevo) {
   // (.en-juego #tpad ...) sigan funcionando
   document.body.classList.toggle('en-juego', nuevo === 'INTRO' || nuevo === 'JUEGO');
   document.body.classList.toggle('en-menu', nuevo === 'MENU' || nuevo === 'MODO');
+  // música del menú: suena en los menús, se para al entrar en partida
+  if (nuevo === 'MENU' || nuevo === 'MODO') empezarMusica();
+  else if (nuevo === 'INTRO' || nuevo === 'JUEGO') pararMusica();
   if (wrapEl) {
     wrapEl.classList.toggle('en-juego', nuevo === 'INTRO' || nuevo === 'JUEGO');
     wrapEl.classList.toggle('en-menu', nuevo === 'MENU' || nuevo === 'MODO');
@@ -43,19 +46,38 @@ function setEstado(nuevo) {
 
 function drawFin(mensaje) {
   E.Pvirtual.fill(0);
-  drawTextBig(190, 170, mensaje, E.Pvirtual, 15);
+  if (mensaje === 'GAME OVER') {
+    const pix = gameOverPix();
+    if (pix) E.Pvirtual.set(pix); // imagen propia (GAMEOVER.DAC)
+  } else {
+    drawTextBig(190, 170, mensaje, E.Pvirtual, 15);
+  }
   present();
 }
 
-// Al salir de jugar(): to_gray + pon_paleta, delay(125) y risa (como el C)
+// Al salir de jugar(): fadeout a gris, delay(125) y risa (como el C).
+// El input queda bloqueado durante el fundido (finHasta en el futuro) y se
+// abre justo después — si no, un tapStart viejo sacaba del FIN al instante.
 function entrarFin(mensaje) {
   setEstado('FIN');
-  paletteToGray();
-  applyPalette();
-  drawFin(mensaje);
-  setTimeout(() => play('risa'), 125);
-  finHasta = performance.now() + 900; // margen para ver el mensaje antes de aceptar input
+  // primero el fundido a gris SOBRE la escena del juego (Pvirtual sigue con el
+  // último frame) y luego la pantalla de game over, ya en gris
+  finHasta = performance.now() + 999999; // sin input durante el fundido
   tapStart = false;
+  fadeToGray().then(async () => {
+    // primero NEGRO (antes de pintar, para que la imagen no destelle),
+    // luego pinta el game over (invisible sobre negro) y haz que APAREZCA
+    // con un fade-in desde negro, con una pausa en negro perceptible
+    paletteToBlack();
+    applyPalette();
+    drawFin(mensaje);
+    await new Promise((r) => setTimeout(r, 400));
+    return fadeInGray().then(() => {
+      setTimeout(() => play('risa'), 125);
+      finHasta = performance.now() + 900; // margen para ver el mensaje antes de aceptar input
+      tapStart = false;
+    });
+  });
 }
 
 // FIN -> MENU: como volver de jugar() al bucle de main() del C
@@ -147,6 +169,10 @@ async function boot() {
     // los controles táctiles son un extra: un fallo aquí no debe matar el juego
     console.error('Error en controles táctiles:', err);
   }
+  // Pulso de arranque: confirma que la vibración funciona en este dispositivo
+  // (si no se nota al abrir la app, el problema es del sistema, no del juego)
+  vibrar(120);
+
   // PWA: cacheo offline (falla silenciosamente si no hay service worker)
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -210,6 +236,7 @@ function frame(now) {
     }
     present();
   } else if (estado === 'FIN') {
+    present(); // re-pinta cada frame: el fadeToGray anima la paleta en vivo
     if (performance.now() >= finHasta && (E.keys[SC_ENTER] || tapStart)) {
       tapStart = false;
       salirFin();

@@ -86,3 +86,51 @@ export function play(name) {
 export function isPlaying() {
   return current !== null;
 }
+
+// Música del menú en bucle (musica.mp3, 32 kbps mono). Si el autoplay la
+// bloquea (política de gestos), se reintenta con el primer toque.
+let musica = null;
+let musicaDeseada = false;
+
+function crearMusica() {
+  if (musica) return musica;
+  musica = new Audio('assets/musica.mp3');
+  musica.loop = true;
+  musica.volume = 0.55;
+  return musica;
+}
+
+export function empezarMusica() {
+  musicaDeseada = true;
+  try {
+    crearMusica().play().catch(() => { /* bloqueado: reintentará con el toque */ });
+  } catch (e) { /* sin audio */ }
+}
+
+export function pararMusica() {
+  musicaDeseada = false;
+  try { if (musica) musica.pause(); } catch (e) { /* sin audio */ }
+}
+
+export function reintentarMusica() {
+  if (!musicaDeseada || !musica || !musica.paused) return;
+  musica.play().catch(() => {});
+}
+
+// Vibración háptica. Primero por el plugin NATIVO (VibrarPlugin en
+// MainActivity — el WebView de Samsung no implementa navigator.vibrate);
+// si no está, se intenta la API web del navegador.
+export function vibrar(patron) {
+  try {
+    const C = typeof window !== 'undefined' ? window.Capacitor : null;
+    const V = C && C.Plugins && C.Plugins.Vibrar;
+    if (V && V.vibrar) {
+      if (Array.isArray(patron)) V.patron({ milis: patron }).catch(() => {});
+      else V.vibrar({ duracion: patron }).catch(() => {});
+      return;
+    }
+  } catch (e) { /* puente no disponible */ }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(patron);
+  } catch (e) { /* sin háptica disponible */ }
+}
