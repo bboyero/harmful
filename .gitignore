@@ -31,3 +31,6 @@ chrome-log.txt
 
 # ---- IDE ----
 .idea/
+
+# ---- Musica sin usar (fuente grande; la comprimida es web/assets/musica.mp3) ----
+Beyond_the_Stone_Gate.mp3

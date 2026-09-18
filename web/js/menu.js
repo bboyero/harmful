@@ -7,7 +7,8 @@ import { E } from './estado.js';
 import { loadDAC, loadRaw } from './assets.js';
 import { applyPalette, paletteToBlack, setLutColor } from './paleta.js';
 import { presentBuf, blitSprite } from './render.js';
-import { drawTextBig, medirTextBig, drawTextMini, miniEscala, caja, lumPaleta } from './fuente.js';
+import { miniEscala } from './fuente.js';
+import { vibrar, reintentarMusica } from './sonido.js';
 
 const MENU_W = 640, MENU_H = 480;
 
@@ -24,29 +25,30 @@ if (wrap) wrap.addEventListener('pointerdown', (e) => {
   const r = wrap.getBoundingClientRect();
   const escala = r.width / MENU_W;
   tap = { x: (e.clientX - r.left) / escala, y: (e.clientY - r.top) / escala };
+  // pulso táctil en los menús, como el teclado de un móvil (15 ms; en
+  // partida no: ahí ya vibran los golpes)
+  if (!document.body.classList.contains('en-juego')) vibrar(15);
+  reintentarMusica(); // el primer toque desbloquea la música si el autoplay la frenó
 });
-
-// Etiqueta de opción legible: caja de contraste + texto MINI x2. La fila
-// seleccionada se invierte (caja clara/texto oscuro).
-function etiqueta(X, Y, texto, dst, seleccionada, oscuro, claro) {
-  const w = texto.length * 10 - 2;
-  const cajaColor = seleccionada ? claro : oscuro;
-  const tinta = seleccionada ? oscuro : claro;
-  caja(X - 6, Y - 4, w + 12, 24, dst, cajaColor);
-  miniEscala(X, Y, texto, dst, 2, tinta);
-}
 
 // (El menú usa solo el arte original: sin etiquetas superpuestas. La selección
 // táctil es tocando la fila de la opción.)
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// carga de los .DAC de menú + fuente ABC (cargaFNT: 80 glifos 16x16 a partir de '0')
+// carga de los .DAC de menú + fuente ABC (el texto de la intro)
 export async function cargarMenus() {
-  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC'];
+  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC', 'MODO.DAC', 'INTRO.DAC', 'GAMEOVER.DAC'];
   const cargas = await Promise.all(nombres.map(loadDAC));
   for (let i = 0; i < nombres.length; i++) DACs[nombres[i]] = cargas[i];
   abcFNT = await loadRaw('ABC.FNT');
+}
+
+// Imagen del game over (GAMEOVER.DAC, 640x400, desde gameover.png) para
+// pintarla en Pvirtual desde main.js (la paleta gris del FIN la apaga igual
+// que al texto del original)
+export function gameOverPix() {
+  return DACs['GAMEOVER.DAC'] ? DACs['GAMEOVER.DAC'].pix : null;
 }
 
 // to_black(): negro total (paleta + imagen)
@@ -101,6 +103,8 @@ export async function creditos() {
 // elige tocando la fila de la opción directamente (el teclado sigue igual).
 export function menu() {
   return new Promise((resolve) => {
+    tap = null; // descarta toques pendientes (p. ej. el tap que salió del FIN:
+    // si no, ese mismo toque elegía una opción al instante y el menú ni se veía)
     mostrarDAC('MENU1.DAC');
     let op = 0;
 
@@ -133,7 +137,8 @@ export function menu() {
   });
 }
 
-// Pantalla de jugar(): start.dac + texto de intro (poneabc), 500 ms y al juego
+// Pantalla de intro: arte nuevo (INTRO.DAC, desde intro.png) + el texto ABC
+// del original letra a letra encima, como el start.dac de antes.
 export async function startScreen() {
   const lineas = [
     'Hello intrepid warrior{ Are you',
@@ -141,7 +146,7 @@ export async function startScreen() {
     'Leia from the Dark Castle?',
     'Them come on||||',
   ];
-  mostrarDAC('START.DAC');
+  mostrarDAC('INTRO.DAC');
   presentBuf(Pmenus, MENU_W, MENU_H);
   let nodelay = false;
   for (let l = 0; l < lineas.length; l++) {
@@ -180,14 +185,16 @@ export function ayuda() {
 
 // SALIR: en el C terminaba el programa imprimiendo los créditos (main()).
 // Aquí los mostramos en pantalla y ENTER (o tap) vuelve al menú.
+// Los textos a MINI x3: la MINI 1x del original es ilegible en pantallas
+// modernas (fuente condensada de 3-4 px).
 export function salir() {
   return new Promise((resolve) => {
     Pmenus.fill(0);
     E.paleta.set(E.paletaBack); // paleta del juego para el texto
     applyPalette();
-    drawTextMini(140, 170, 'Graficos: Borja Boyero', Pmenus);
-    drawTextMini(140, 210, '(c)Borja Boyero. 1996-97', Pmenus);
-    drawTextMini(140, 250, 'PULSA ENTER PARA VOLVER', Pmenus);
+    miniEscala(140, 170, 'Graficos: Borja Boyero', Pmenus, 3, 15);
+    miniEscala(140, 215, '(c)Borja Boyero. 1996-97', Pmenus, 3, 15);
+    miniEscala(140, 270, 'PULSA ENTER PARA VOLVER', Pmenus, 3, 15);
     presentBuf(Pmenus, MENU_W, MENU_H);
     function paso() {
       if (E.keys[SC_ENTER] || tap) { E.keys[SC_ENTER] = 0; tap = null; resolve(); return; }
@@ -208,37 +215,20 @@ export function modoActual() {
 
 export function modo() {
   return new Promise((resolve) => {
-    Pmenus.fill(0);
-    E.paleta.set(E.paletaBack);
-    applyPalette();
-    const [oscuro, claro] = lumPaleta();
+    // Pantalla de modo con el arte propio (MODO.DAC, generado desde modo.png
+    // como MENU1.DAC): NORMAL en y~185-200 y ALEATORIO en y~281-303.
+    mostrarDAC('MODO.DAC');
     let op = modoActual() === 'aleatorio' ? 1 : 0;
 
-    const dibujar = () => {
-      Pmenus.fill(0);
-      drawTextBig((MAX_X - medirTextBig('MODO')) / 2 | 0, 60, 'MODO', Pmenus, 15);
-      for (let i = 0; i < 2; i++) {
-        const y = 180 + i * 80;
-        etiqueta(170, y - 4, (op === i ? '> ' : '  ') + (i === 0 ? 'NORMAL' : 'ALEATORIO'), Pmenus, op === i, oscuro, claro);
-        miniEscala(170, y + 22, i === 0 ? 'Niveles 1 a 15 en orden' : 'Los 15 niveles barajados', Pmenus, 2, claro);
-      }
-      const pista = wrap && wrap.classList.contains('touch-on')
-        ? 'TOCA UNA OPCION PARA ELEGIRLA'
-        : 'PULSA ENTER PARA ELEGIR, ESC PARA VOLVER';
-      miniEscala((MAX_X - pista.length * 10) / 2 | 0, 424, pista, Pmenus, 2, claro);
-      presentBuf(Pmenus, MENU_W, MENU_H);
-    };
-    dibujar();
-
     function paso() {
-      if (E.keys[SC_ABJ]) { E.keys[SC_ABJ] = 0; op = 1; dibujar(); }
-      else if (E.keys[SC_ARR]) { E.keys[SC_ARR] = 0; op = 0; dibujar(); }
+      presentBuf(Pmenus, MENU_W, MENU_H);
+      if (E.keys[SC_ABJ]) { E.keys[SC_ABJ] = 0; op = 1; }
+      else if (E.keys[SC_ARR]) { E.keys[SC_ARR] = 0; op = 0; }
       if (E.keys[SC_ESC]) { E.keys[SC_ESC] = 0; tap = null; resolve(); return; }
       if (E.keys[SC_ENTER] || tap) {
         if (tap && !E.keys[SC_ENTER]) {
-          // tap sobre una de las dos opciones (filas centradas en 180 y 260)
-          if (tap.y >= 140 && tap.y < 220) op = 0;
-          else if (tap.y >= 220 && tap.y < 300) op = 1;
+          // tap sobre la opción: NORMAL arriba, ALEATORIO abajo (frontera 240)
+          op = tap.y < 240 ? 0 : 1;
         }
         E.keys[SC_ENTER] = 0;
         tap = null;

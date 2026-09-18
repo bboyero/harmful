@@ -36,6 +36,53 @@ export function paletteToGray() {
   }
 }
 
+// Fundido gradual de negro al gris: la pantalla de game over aparece poco a
+// poco tras el fadeout de la muerte.
+export async function fadeInGray(ms = 800) {
+  const p = E.paleta;
+  const gris = new Float64Array(256);
+  for (let i = 0; i < 256; i++)
+    gris[i] = (4 * E.paletaBack[i * 3] + 10 * E.paletaBack[i * 3 + 1] + 2 * E.paletaBack[i * 3 + 2]) >> 4;
+  p.fill(0); // negro total de partida
+  applyPalette();
+  const dormir = (t) => new Promise((r) => setTimeout(r, t));
+  const t0 = performance.now();
+  while (true) {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    for (let i = 0; i < 256; i++) {
+      p[i * 3] = gris[i] * k;
+      p[i * 3 + 1] = gris[i] * k;
+      p[i * 3 + 2] = gris[i] * k;
+    }
+    applyPalette();
+    if (k >= 1) return;
+    await dormir(16);
+  }
+}
+
+// Fundido gradual de la paleta actual al gris (la muerte del original hacía
+// to_gray instantáneo + fade_to negro; Borja prefiere el fundido A gris).
+export async function fadeToGray(ms = 1200) {
+  const p = E.paleta;
+  const inicio = p.slice(); // colores actuales (incluye la rotación del agua)
+  const gris = new Float64Array(256);
+  for (let i = 0; i < 256; i++)
+    gris[i] = (4 * inicio[i * 3] + 10 * inicio[i * 3 + 1] + 2 * inicio[i * 3 + 2]) >> 4;
+  const dormir = (t) => new Promise((r) => setTimeout(r, t));
+  const t0 = performance.now();
+  while (true) {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    for (let i = 0; i < 256; i++) {
+      p[i * 3] = inicio[i * 3] + (gris[i] - inicio[i * 3]) * k;
+      p[i * 3 + 1] = inicio[i * 3 + 1] + (gris[i] - inicio[i * 3 + 1]) * k;
+      p[i * 3 + 2] = inicio[i * 3 + 2] + (gris[i] - inicio[i * 3 + 2]) * k;
+    }
+    applyPalette();
+    if (k >= 1) return;
+    await dormir(16);
+  }
+}
+
 // Restaura la paleta desde la copia de seguridad (movedata paleta_back -> paleta)
 export function restorePalette() {
   E.paleta.set(E.paletaBack);
