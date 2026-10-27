@@ -1,20 +1,34 @@
 # Convierte un PNG a .DAC (formato del juego): encaja la imagen sin deformar
 # en la resolución pedida (centrada sobre negro), la cuantiza con la paleta
 # del juego (assets/PALETA.1, Floyd-Steinberg) y codifica el RLE + paleta.
-# Uso: python png-a-dac.py entrada.png salida.DAC [ancho alto]   (desde web/)
+# Uso: python png-a-dac.py entrada.png salida.DAC [ancho alto] [--sat 0.75]
+#   (desde web/; --sat multiplica la saturación HSV antes de cuantizar)
 import struct, sys
 from PIL import Image
+import colorsys
 
 W, H = 640, 400
 src, dst = sys.argv[1], sys.argv[2]
-if len(sys.argv) > 3:
+if len(sys.argv) > 3 and not sys.argv[3].startswith('--'):
     W, H = int(sys.argv[3]), int(sys.argv[4])
+sat = 1.0
+if '--sat' in sys.argv:
+    sat = float(sys.argv[sys.argv.index('--sat') + 1])
 
 pal_bytes = open('assets/PALETA.1', 'rb').read(768)
 pimg = Image.new('P', (1, 1))
 pimg.putpalette(pal_bytes)
 
 img = Image.open(src).convert('RGB')
+if sat != 1.0:
+    datos = []
+    for r, g, b in img.getdata():
+        h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+        s = max(0, min(1, s * sat))
+        nr, ng, nb = colorsys.hsv_to_rgb(h, s, v)
+        datos.append((round(nr * 255), round(ng * 255), round(nb * 255)))
+    img = Image.new('RGB', img.size)
+    img.putdata(datos)
 esc = min(W / img.width, H / img.height)
 img = img.resize((round(img.width * esc), round(img.height * esc)), Image.LANCZOS)
 lienzo = Image.new('RGB', (W, H), (0, 0, 0))
