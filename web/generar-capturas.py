@@ -19,15 +19,17 @@ for base in ['cap-splash', 'cap-juego', 'cap-disparo', 'cap-gameover']:
     raw_a_png(base + '.raw', tmp)
     img = Image.open(tmp)
     img = img.resize((1280, 800), Image.NEAREST)
-    img.save('playstore/' + base + '.png')
-    print('playstore/' + base + '.png')
+    # letterbox a 1280x720 (16:9, formato de Play) con barras negras
+    fondo = Image.new('RGB', (1280, 720), (0, 0, 0))
+    fondo.paste(img, (0, (720 - 800) // 2))
+    fondo.save('../android-cap/playstore/' + base + '.png')
+    print('../android-cap/playstore/' + base + '.png')
 
-# feature graphic 1024x500: el arte de HARM.GIF centrado en fondo negro
-src = Image.open('../HARM.GIF').convert('RGBA')
-alto = 500
-ancho = int(src.width * alto / src.height)
-src = src.resize((ancho, alto), Image.LANCZOS)
-fondo = Image.new('RGBA', (1024, 500), (0, 0, 0, 255))
-fondo.paste(src, ((1024 - ancho) // 2, 0), src)
-fondo.convert('RGB').save('playstore/feature-graphic.png')
-print('playstore/feature-graphic.png')
+# feature graphic 1024x500: el arte NUEVO del menu (menu.png) con cover-crop
+src = Image.open('../menu.png').convert('RGB')
+s = max(1024 / src.width, 500 / src.height)
+src = src.resize((int(src.width * s), int(src.height * s)), Image.LANCZOS)
+x0 = (src.width - 1024) // 2
+y0 = (src.height - 500) // 2
+src.crop((x0, y0, x0 + 1024, y0 + 500)).save('../android-cap/playstore/feature-graphic.png')
+print('../android-cap/playstore/feature-graphic.png')

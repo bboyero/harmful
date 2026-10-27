@@ -36,24 +36,18 @@ export function paletteToGray() {
   }
 }
 
-// Fundido gradual de negro al gris: la pantalla de game over aparece poco a
-// poco tras el fadeout de la muerte.
-export async function fadeInGray(ms = 800) {
+// Fundido gradual de negro a la paleta del juego A COLOR: la pantalla de
+// game over aparece poco a poco en color tras el fadeout de la muerte.
+export async function fadeInColor(ms = 900) {
   const p = E.paleta;
-  const gris = new Float64Array(256);
-  for (let i = 0; i < 256; i++)
-    gris[i] = (4 * E.paletaBack[i * 3] + 10 * E.paletaBack[i * 3 + 1] + 2 * E.paletaBack[i * 3 + 2]) >> 4;
+  const destino = E.paletaBack; // paleta prístina del juego
   p.fill(0); // negro total de partida
   applyPalette();
   const dormir = (t) => new Promise((r) => setTimeout(r, t));
   const t0 = performance.now();
   while (true) {
     const k = Math.min(1, (performance.now() - t0) / ms);
-    for (let i = 0; i < 256; i++) {
-      p[i * 3] = gris[i] * k;
-      p[i * 3 + 1] = gris[i] * k;
-      p[i * 3 + 2] = gris[i] * k;
-    }
+    for (let i = 0; i < 768; i++) p[i] = destino[i] * k;
     applyPalette();
     if (k >= 1) return;
     await dormir(16);

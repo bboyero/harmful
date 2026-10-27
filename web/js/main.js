@@ -7,7 +7,7 @@
 import { TICK_MS, SC_ESC, SC_ENTER } from './ctes.js';
 import { E } from './estado.js';
 import { fetchAssets } from './assets.js';
-import { initPalette, applyPalette, paletteToBlack, fadeToGray, fadeInGray, restorePalette } from './paleta.js';
+import { initPalette, applyPalette, paletteToBlack, fadeToGray, fadeInColor, restorePalette } from './paleta.js';
 import { present, resizeCanvas, cargarBezel } from './render.js';
 import { initKeyboard } from './entrada.js';
 import { initTouch, recolocarControles } from './entrada-tactil.js';
@@ -72,7 +72,7 @@ function entrarFin(mensaje) {
     applyPalette();
     drawFin(mensaje);
     await new Promise((r) => setTimeout(r, 400));
-    return fadeInGray().then(() => {
+    return fadeInColor().then(() => {
       setTimeout(() => play('risa'), 125);
       finHasta = performance.now() + 900; // margen para ver el mensaje antes de aceptar input
       tapStart = false;
@@ -193,6 +193,7 @@ async function boot() {
   cargarBezel().catch(() => {}); // bezel personalizado opcional (assets/bezel.png)
   await loadSounds(); // sin SONIDO.DAT el juego sigue mudo (no es crítico)
   await cargarMenus(); // .DAC de menús + fuente ABC
+  empezarMusica(); // desde el arranque (si el autoplay lo bloquea, el primer toque la lanza)
   wrapEl = document.getElementById('wrap');
   if (wrapEl) {
     wrapEl.addEventListener('pointerdown', () => { tapStart = true; });

@@ -22,7 +22,7 @@ import { activateGenerator, destroyGenerator } from './generado.js';
 import { startCrono, updateCrono } from './crono.js';
 import { rotatePalette, restorePalette, whiteFlash } from './paleta.js';
 import { initNube, mueveNubes } from './nubes.js';
-import { play, vibrar } from './sonido.js';
+import { play, vibrar, ahogamientoDramatico } from './sonido.js';
 
 // ---------------------------------------------------------------------------
 // Jugador
@@ -455,7 +455,7 @@ export function openTrap(prop) {
 
 // ahogar: muerte instantánea (energía -100 la marca como ahogado)
 export function drown() {
-  play('choff');
+  ahogamientoDramatico(); // splash + burbujas + eco grave
   E.play[E.jug].energia = -100;
   vibrar([100, 50, 200]); // golpe fuerte: ahogamiento
 }

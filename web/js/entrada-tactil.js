@@ -150,10 +150,13 @@ export function initTouch() {
 
     if (banda >= 40) {
       // franjas útiles (apaisado): cruceta en la franja izquierda, pila en la
-      // derecha — dentro del canvas, sin tapar el juego
-      const tam = Math.min(banda - 12, r.height * 0.4, 170);
+      // derecha. El pad usa EL MISMO TAMAÑO que en vertical (28% del ancho de
+      // juego) aunque no quepa en la banda: se solapa parcialmente con el
+      // juego, como pidió Borja.
+      const tam = Math.min(gW * 0.28, 170);
       padEl.style.width = tam + 'px';
-      colocar(padEl, (banda - tam) / 2, (r.height - tam) / 2, tam, tam);
+      // en la parte BAJA de la banda (como en vertical), solapando el juego
+      colocar(padEl, (banda - tam) / 2, r.height - tam - 8, tam, tam);
 
       const fire = document.getElementById('tfire');
       const pot = document.getElementById('tpot');

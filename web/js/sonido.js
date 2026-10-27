@@ -87,6 +87,65 @@ export function isPlaying() {
   return current !== null;
 }
 
+// Ruido blanco de 1 s en caché (para las burbujas)
+const ruido = {};
+function makeNoise(c) {
+  if (!ruido[c.sampleRate]) {
+    const b = c.createBuffer(1, c.sampleRate, c.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    ruido[c.sampleRate] = b;
+  }
+  const src = c.createBufferSource();
+  src.buffer = ruido[c.sampleRate];
+  return src;
+}
+
+// Muerte por agua, versión dramática: splash + burbujas subiendo + eco grave
+// largo (hundimiento de película). La secuencia no pasa por `current`, así
+// que suena completa y no corta la risa del FIN.
+export function ahogamientoDramatico() {
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+
+  // 1) splash (choff)
+  const splash = ctx.createBufferSource();
+  splash.buffer = buffers.choff;
+  splash.connect(master);
+  splash.start(t0);
+
+  // 2) burbujas subiendo: 6 ráfagas de ruido band-pass con tono ascendente
+  for (let i = 0; i < 6; i++) {
+    const t = t0 + 0.35 + i * 0.22;
+    const dur = 0.09;
+    const n = makeNoise(ctx);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(600 + i * 280, t);
+    bp.Q.value = 6;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0, t);
+    ng.gain.linearRampToValueAtTime(0.25, t + dur * 0.4);
+    ng.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(bp); bp.connect(ng); ng.connect(master);
+    n.start(t);
+    n.stop(t + dur);
+  }
+
+  // 3) eco grave largo: seno 200 Hz -> 35 Hz a lo largo de ~2,6 s
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(200, t0 + 1.2);
+  osc.frequency.exponentialRampToValueAtTime(35, t0 + 3.8);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t0 + 1.2);
+  og.gain.linearRampToValueAtTime(0.45, t0 + 1.8);
+  og.gain.linearRampToValueAtTime(0.0001, t0 + 4.0);
+  osc.connect(og); og.connect(master);
+  osc.start(t0 + 1.2);
+  osc.stop(t0 + 4.1);
+}
+
 // Música del menú en bucle (musica.mp3, 32 kbps mono). Si el autoplay la
 // bloquea (política de gestos), se reintenta con el primer toque.
 let musica = null;

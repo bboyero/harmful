@@ -38,7 +38,7 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // carga de los .DAC de menú + fuente ABC (el texto de la intro)
 export async function cargarMenus() {
-  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC', 'MODO.DAC', 'INTRO.DAC', 'GAMEOVER.DAC'];
+  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC', 'MODO.DAC', 'INTRO.DAC', 'GAMEOVER.DAC', 'COPYRIGHT.DAC'];
   const cargas = await Promise.all(nombres.map(loadDAC));
   for (let i = 0; i < nombres.length; i++) DACs[nombres[i]] = cargas[i];
   abcFNT = await loadRaw('ABC.FNT');
@@ -184,17 +184,11 @@ export function ayuda() {
 }
 
 // SALIR: en el C terminaba el programa imprimiendo los créditos (main()).
-// Aquí los mostramos en pantalla y ENTER (o tap) vuelve al menú.
-// Los textos a MINI x3: la MINI 1x del original es ilegible en pantallas
-// modernas (fuente condensada de 3-4 px).
+// Aquí se muestra la pantalla de copyright propia (COPYRIGHT.DAC, desde
+// copyrigth.png) y ENTER (o tap) vuelve al menú.
 export function salir() {
   return new Promise((resolve) => {
-    Pmenus.fill(0);
-    E.paleta.set(E.paletaBack); // paleta del juego para el texto
-    applyPalette();
-    miniEscala(140, 170, 'Graficos: Borja Boyero', Pmenus, 3, 15);
-    miniEscala(140, 215, '(c)Borja Boyero. 1996-97', Pmenus, 3, 15);
-    miniEscala(140, 270, 'PULSA ENTER PARA VOLVER', Pmenus, 3, 15);
+    mostrarDAC('COPYRIGHT.DAC');
     presentBuf(Pmenus, MENU_W, MENU_H);
     function paso() {
       if (E.keys[SC_ENTER] || tap) { E.keys[SC_ENTER] = 0; tap = null; resolve(); return; }
