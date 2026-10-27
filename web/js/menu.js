@@ -38,7 +38,7 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // carga de los .DAC de menú + fuente ABC (el texto de la intro)
 export async function cargarMenus() {
-  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC', 'MODO.DAC', 'INTRO.DAC', 'GAMEOVER.DAC', 'COPYRIGHT.DAC'];
+  const nombres = ['OVERFLOW.DAC', 'HARMFUL.DAC', 'BICHO.DAC', 'MENU1.DAC', 'AYUDA.DAC', 'START.DAC', 'MODO.DAC', 'INTRO.DAC', 'GAMEOVER.DAC', 'COPYRIGHT.DAC', 'FIN.DAC'];
   const cargas = await Promise.all(nombres.map(loadDAC));
   for (let i = 0; i < nombres.length; i++) DACs[nombres[i]] = cargas[i];
   abcFNT = await loadRaw('ABC.FNT');
@@ -49,6 +49,12 @@ export async function cargarMenus() {
 // que al texto del original)
 export function gameOverPix() {
   return DACs['GAMEOVER.DAC'] ? DACs['GAMEOVER.DAC'].pix : null;
+}
+
+// Imagen del FIN (FIN.DAC, 640x400, desde fin.png) para pintarla en Pvirtual
+// desde main.js al salir con ESC
+export function finPix() {
+  return DACs['FIN.DAC'] ? DACs['FIN.DAC'].pix : null;
 }
 
 // to_black(): negro total (paleta + imagen)

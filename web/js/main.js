@@ -14,7 +14,7 @@ import { initTouch, recolocarControles } from './entrada-tactil.js';
 import { initLevel } from './nivel.js';
 import { gameTick, initPlayers } from './juego.js';
 import { drawTextBig } from './fuente.js';
-import { cargarMenus, creditos, menu, startScreen, ayuda, salir, modo, modoActual, gameOverPix } from './menu.js';
+import { cargarMenus, creditos, menu, startScreen, ayuda, salir, modo, modoActual, gameOverPix, finPix } from './menu.js';
 import { loadSounds, play, vibrar, empezarMusica, pararMusica } from './sonido.js';
 
 const params = new URLSearchParams(location.search);
@@ -49,6 +49,10 @@ function drawFin(mensaje) {
   if (mensaje === 'GAME OVER') {
     const pix = gameOverPix();
     if (pix) E.Pvirtual.set(pix); // imagen propia (GAMEOVER.DAC)
+  } else if (mensaje === 'FIN') {
+    const pix = finPix();
+    if (pix) E.Pvirtual.set(pix); // imagen propia (FIN.DAC, al salir con ESC)
+    else drawTextBig(190, 170, mensaje, E.Pvirtual, 15);
   } else {
     drawTextBig(190, 170, mensaje, E.Pvirtual, 15);
   }
