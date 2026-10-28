@@ -34,3 +34,23 @@ chrome-log.txt
 
 # ---- Musica sin usar (fuente grande; la comprimida es web/assets/musica.mp3) ----
 Beyond_the_Stone_Gate.mp3
+
+# ---- Codigo C original de 1997: solo local (backup en C:\disketes\harmful-c-original).
+# Eliminado del historial publico el 2026-10-29 (reescritura + force-push) ----
+/*.CC
+/*.BAK
+/*.BAT
+/*.PAS
+/*.EXE
+/*.PIF
+/*.SYM
+/*.BPT
+/JUEGO.ERR
+/PROTO.H
+/SB.H
+/MAPA.DES
+/CC
+/GEN
+/dosbox-run.conf
+/android-cap.zip
+/src/
