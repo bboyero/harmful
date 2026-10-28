@@ -5,7 +5,7 @@
 // con un entrada-tactil.js viejo rompía los módulos ES: "does not provide an
 // export named..."). El coste: la primera carga tras una actualización puede
 // servir la versión anterior; la siguiente ya trae la nueva.
-const CACHE = 'harmful-v84';
+const CACHE = 'harmful-v85';
 
 const CORE = [
   './', './index.html', './manifest.webmanifest',
